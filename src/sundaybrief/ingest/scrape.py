@@ -1,0 +1,101 @@
+"""Non-iCal local sources: RSS feeds, WordPress "The Events Calendar" JSON,
+and (stubbed) headless rendering.
+
+Order of preference — always try the cheapest that works:
+  1. iCal feed  -> use ingest.ical instead (best)
+  2. RSS        -> ingest_rss (coarse: uses publish date, good for newsletters)
+  3. wp-events  -> ingest_wp_events (The Events Calendar REST API, real dates)
+  4. headless   -> render JS with Playwright (last resort; not implemented yet)
+"""
+from __future__ import annotations
+
+from datetime import datetime
+
+import feedparser
+import requests
+
+from ..models import Event, to_local
+
+
+def ingest_rss(source: dict, window_start: datetime, window_end: datetime, **_) -> list[Event]:
+    """Parse an RSS/Atom feed. Coarse by nature — most feeds carry a publish
+    date, not an event date — so this is best for newsletters and community
+    blogs. Prefer a real event feed (iCal / wp-events) when one exists.
+    """
+    feed = feedparser.parse(source["url"])
+    events: list[Event] = []
+    for entry in feed.entries:
+        parsed = entry.get("published_parsed") or entry.get("updated_parsed")
+        if not parsed:
+            continue
+        start = to_local(datetime(*parsed[:6]))
+        if not (window_start <= start <= window_end):
+            continue
+        events.append(
+            Event(
+                title=entry.get("title", "(untitled)").strip(),
+                start=start,
+                end=None,
+                all_day=True,
+                source=source["name"],
+                category=source["category"],
+                url=entry.get("link", ""),
+            )
+        )
+    return events
+
+
+def ingest_wp_events(source: dict, window_start: datetime, window_end: datetime, timeout: int = 30) -> list[Event]:
+    """Best-effort reader for WordPress 'The Events Calendar' REST API.
+
+    Point `url` at the site root (e.g. https://example.com); this hits
+    /wp-json/tribe/events/v1/events with a date range. Experimental — plugin
+    versions vary, so it's wrapped defensively and returns [] on any mismatch.
+    """
+    base = source["url"].rstrip("/")
+    endpoint = f"{base}/wp-json/tribe/events/v1/events"
+    params = {
+        "start_date": window_start.strftime("%Y-%m-%d %H:%M:%S"),
+        "end_date": window_end.strftime("%Y-%m-%d %H:%M:%S"),
+        "per_page": 50,
+    }
+    try:
+        resp = requests.get(endpoint, params=params, timeout=timeout,
+                            headers={"User-Agent": "sunday-brief/0.1"})
+        resp.raise_for_status()
+        payload = resp.json()
+    except (requests.RequestException, ValueError):
+        return []
+
+    events: list[Event] = []
+    for item in payload.get("events", []):
+        try:
+            start = to_local(datetime.fromisoformat(item["start_date"]))
+            end = to_local(datetime.fromisoformat(item["end_date"])) if item.get("end_date") else None
+        except (KeyError, ValueError):
+            continue
+        events.append(
+            Event(
+                title=(item.get("title") or "(untitled)").strip(),
+                start=start,
+                end=end,
+                all_day=bool(item.get("all_day")),
+                source=source["name"],
+                category=source["category"],
+                location=((item.get("venue") or {}).get("venue") or ""),
+                url=item.get("url", ""),
+            )
+        )
+    return events
+
+
+def ingest_headless(source: dict, window_start: datetime, window_end: datetime, **_) -> list[Event]:
+    """TODO: render JS-only calendars (e.g. Village Green's Tockify embed) with
+    Playwright and scrape the DOM. Only reach for this once you've confirmed the
+    site exposes no iCal, RSS, or wp-events endpoint. Left unimplemented so a
+    misconfigured source fails loud rather than silently pretending to work.
+    """
+    raise NotImplementedError(
+        f"Headless scraping for {source['name']!r} isn't implemented yet. "
+        f"First check for an iCal/RSS/wp-json feed on that site."
+    )

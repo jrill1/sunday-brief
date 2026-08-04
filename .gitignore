@@ -1,0 +1,11 @@
+# Only .env holds real secrets. sources.yaml references secret URLs by name
+# (via `secret:`), so it's safe to commit and travels to the Mini with the repo.
+# Never paste a bearer iCal URL directly into sources.yaml — put it in .env.
+.env
+data/
+*.log
+.venv/
+__pycache__/
+*.egg-info/
+*.pyc
+.DS_Store

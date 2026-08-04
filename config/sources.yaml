@@ -1,0 +1,37 @@
+# Your live config. Start with just your own two calendars; add your spouse's
+# once this works. Secret iCal URLs go in .env (referenced by `secret:` below),
+# never here — so this file is safe to commit and sync to the Mini.
+
+window_days: 7
+
+summary:
+  style: templated          # switch to `narrative` once the basics work
+  model: claude-sonnet-5
+
+sources:
+  # ---- You (start here) -------------------------------------------------
+  - name: "My work"
+    type: ical
+    category: work
+    person: me
+    secret: ICAL_ME_WORK
+  - name: "My personal"
+    type: ical
+    category: personal
+    person: me
+    secret: ICAL_ME_PERSONAL
+
+  # ---- Spouse (uncomment once yours works) ------------------------------
+  # - name: "Spouse — work"
+  #   type: ical
+  #   category: work
+  #   person: spouse
+  #   secret: ICAL_SPOUSE_WORK
+  # - name: "Spouse — personal"
+  #   type: ical
+  #   category: personal
+  #   person: spouse
+  #   secret: ICAL_SPOUSE_PERSONAL
+
+  # Daycare + local sources come later — see config/sources.example.yaml for
+  # the full menu of source types.

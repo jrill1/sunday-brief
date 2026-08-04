@@ -1,0 +1,79 @@
+# Copy this to config/sources.yaml and fill in the real values.
+# config/sources.yaml is git-ignored so your secret URLs never get committed.
+#
+# Each source needs:  name, type, category, and either `url:` or `secret:`
+#   type:     ical | rss | wp-events | headless
+#   category: work | personal | daycare | local
+#   secret:   name of an env var (in .env) holding the real URL — use this for
+#             the bearer-capability iCal URLs so they stay out of the repo.
+
+window_days: 7
+
+summary:
+  style: templated          # templated | narrative
+  model: claude-sonnet-5    # only used when style: narrative (any current model string)
+  full_brief_url: ""        # optional: a page you host on the Mini; shown as "Full brief →"
+
+sources:
+  # ---- Parent calendars -------------------------------------------------
+  # In Google Calendar: Settings → (pick calendar) → Integrate calendar →
+  # "Secret address in iCal format". Put each URL in .env, reference it here.
+  - name: "My work"
+    type: ical
+    category: work
+    person: me
+    secret: ICAL_ME_WORK
+  - name: "My personal"
+    type: ical
+    category: personal
+    person: me
+    secret: ICAL_ME_PERSONAL
+  - name: "Spouse — work"
+    type: ical
+    category: work
+    person: spouse
+    secret: ICAL_SPOUSE_WORK
+  - name: "Spouse — personal"
+    type: ical
+    category: personal
+    person: spouse
+    secret: ICAL_SPOUSE_PERSONAL
+
+  # ---- Daycare ----------------------------------------------------------
+  # Brightwheel: only works if your center enabled "add to personal calendar".
+  # If so, paste that iCal URL into .env as ICAL_BRIGHTWHEEL.
+  - name: "Brightwheel (Max)"
+    type: ical
+    category: daycare
+    child: Max
+    enabled: false          # flip to true once you have the sync URL
+    secret: ICAL_BRIGHTWHEEL
+  # Goddard Family Hub has no feed. Generate a term .ics once from the school-
+  # year calendar PDF and drop it here; update the path.
+  - name: "Goddard (Ellie)"
+    type: ical
+    category: daycare
+    child: Ellie
+    enabled: false          # flip to true once the .ics exists
+    url: "file://./data/goddard-term.ics"
+
+  # ---- Local (Maplewood / South Orange / Millburn) ----------------------
+  # Prefer real event feeds. Grab the iCal "subscribe" link off each LibCal
+  # page and paste it below as type: ical.
+  - name: "Millburn Library (LibCal)"
+    type: ical
+    category: local
+    enabled: false
+    url: "PASTE_LIBCAL_ICAL_SUBSCRIBE_URL"
+  - name: "Maplewood Library (LibNet)"
+    type: ical
+    category: local
+    enabled: false
+    url: "PASTE_LIBNET_ICAL_URL"
+  # WordPress community calendar — try the site root against The Events Calendar
+  # REST API first; fall back to its /feed/ as rss if that returns nothing.
+  - name: "Village Green"
+    type: wp-events
+    category: local
+    enabled: false
+    url: "https://villagegreennj.com"

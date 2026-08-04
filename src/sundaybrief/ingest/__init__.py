@@ -1,0 +1,15 @@
+"""Dispatch table mapping a source `type` to its ingest function.
+
+Every ingester has the same shape: (source, window_start, window_end) -> list[Event].
+"""
+from .ical import ingest_ical
+from .scrape import ingest_headless, ingest_rss, ingest_wp_events
+
+INGESTERS = {
+    "ical": ingest_ical,
+    "rss": ingest_rss,
+    "wp-events": ingest_wp_events,
+    "headless": ingest_headless,
+}
+
+__all__ = ["INGESTERS", "ingest_ical", "ingest_rss", "ingest_wp_events", "ingest_headless"]
