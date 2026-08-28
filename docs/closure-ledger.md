@@ -34,19 +34,27 @@ Rules:
 
 - `school` — inferred from content (sender / letterhead), e.g. `Goddard`, `Le Parc`.
 - `type` — `closure` (full day, no care) | `partial_closure` (half-day, early
-  dismissal, or delayed open). Describes the *kind* of disruption.
+  dismissal, or delayed open) | `note` (a date-bound logistics fact that does
+  *not* change care availability — pack an item, a fee/form due, a dress-up
+  day, a deadline). Describes the *kind* of fact.
 - `active` — `1` = in effect (the default) | `0` = a previously announced
-  closure/partial is now **canceled** and the school is open. `type` and `active`
-  are orthogonal: `type` is *what kind*, `active` is *whether it's in effect*.
-  A cancellation is just a row with `active: 0` — never an edit of a prior row.
+  closure/partial/note is now **canceled** or no longer applies. `type` and
+  `active` are orthogonal: `type` is *what kind*, `active` is *whether it's in
+  effect*. A cancellation is just a row with `active: 0` — never an edit of a
+  prior row. This applies to `note` rows too (e.g. a canceled trip retracts its
+  swimsuit reminder) — same fold, no special-casing.
 - `start_date` / `end_date` — **as written**, ISO. Single day → the two are equal.
   A range stays a range here; **the LLM never enumerates the days** (it crosses
   year boundaries and models miscount — code expands it, see §2).
-- `reason` — short human label ("Labor Day", "Winter Recess", "Faculty In-Service").
-- **Scope filter (the noise rule):** emit only full closures, partial closures,
-  and cancellations of those. **Exclude** festivals, parent presentations, evening
-  faculty meetings, parent nights out, community events — anything that doesn't
-  change whether care is available that day.
+- `reason` — short human label. For `closure`/`partial_closure`: the cause
+  ("Labor Day", "Winter Recess", "Faculty In-Service"). For `note`: a concrete,
+  actionable summary ("Bring a swimsuit for Wednesday's field trip", "$25 field
+  trip fee due").
+- **Scope filter (the noise rule):** emit full closures, partial closures, and
+  cancellations of those, plus `note`s for concrete date-bound action items
+  (packing, fees/forms, deadlines, schedule/classroom transitions). **Exclude**
+  anything with no specific date, and pure marketing/social content with no
+  required action (newsletters, "register now" event promos, photo galleries).
 
 Everything else (titles, child, provenance, day-expansion) is added by code so the
 model has less to get right.
@@ -107,7 +115,7 @@ One row **per day**. Append-only.
 Field roles:
 
 - `date` — the **query + fold key**. Everything downstream asks "is this day closed?"
-- `type` — `closure` | `partial_closure`: the kind of disruption (for display).
+- `type` — `closure` | `partial_closure` | `note`: the kind of fact (for display).
 - `active` — `1` in effect | `0` canceled. Read at fold time to decide the day.
 - `span_start` / `span_end` — **display grouping** only (regroup consecutive days).
 - `source_date` — when the **school announced it**. This is the **precedence key**
@@ -139,9 +147,14 @@ The ledger is raw history; **effective** state is computed on read:
    (pathological), **fail safe — treat the day as closed** and flag for review
    (missing a closure and having no coverage is worse than an unneeded backup plan).
 3. The winner decides the day:
-   - `active: 1` → closed (full) or reduced (partial), per `type`.
-   - `active: 0` → **open** (a canceled closure).
-   - **No rows for that date at all** → open (never announced).
+   - `active: 1` → closed (full) or reduced (partial), per `type` — or, for
+     `note` rows, a standing logistics fact that doesn't affect care.
+   - `active: 0` → **open** (a canceled closure/partial), or a retracted note.
+   - **No rows for that date at all** → open, no note.
+
+`effective_closures()` and `effective_notes()` both read the same fold but
+filter on `type`, so a coverage-gap check never has to sift `note` rows out
+itself.
 
 Because the fold is keyed on `date`, everything composes without special-casing:
 

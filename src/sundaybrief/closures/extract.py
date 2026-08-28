@@ -7,6 +7,7 @@ returning a list of dicts) can stand in for offline dev/testing.
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 
 from .reader import EmailDoc
@@ -55,7 +56,7 @@ class AnthropicExtractor:
     def __call__(self, doc: EmailDoc) -> list[dict]:
         resp = self.client.messages.create(
             model=self.model,
-            max_tokens=2000,
+            max_tokens=8192,
             system=[{
                 "type": "text",
                 "text": self.system_prompt,
@@ -64,4 +65,14 @@ class AnthropicExtractor:
             messages=[{"role": "user", "content": build_user_block(doc)}],
         )
         text = "".join(b.text for b in resp.content if b.type == "text")
-        return parse_response(text)
+
+        if resp.stop_reason == "max_tokens":
+            print(f"  WARNING: response truncated at max_tokens for {doc.source_subject!r} "
+                  f"— facts are likely missing.", file=sys.stderr)
+
+        items = parse_response(text)
+        if not items and text.strip() not in ("[]", ""):
+            print(f"  WARNING: could not parse a JSON array from the extractor response for "
+                  f"{doc.source_subject!r} ({len(text)} chars) — treating as 0 facts.",
+                  file=sys.stderr)
+        return items

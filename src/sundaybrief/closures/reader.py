@@ -1,23 +1,26 @@
-"""Turn raw emails into a common EmailDoc the extractor can consume.
+"""Turn raw source documents into a common EmailDoc the extractor can consume.
 
 Handles the wrinkle that these are *forwarded* messages: the envelope From is
 you (justinrill), but the school's real sender/date/subject live inside the
 "---------- Forwarded message ---------" block in the body. We pull those out so
 provenance (source_from, source_date) reflects the school, not the forward.
 
-Two sources, same output: a local directory of .eml files (dev) and the drop-box
-over IMAP (production).
+Three sources, same output: a local directory of .eml files (dev), the drop-box
+over IMAP (production), and a public webpage (e.g. a school's academic-calendar
+page) for sources that never send email at all.
 """
 from __future__ import annotations
 
 import email
 import glob
+import hashlib
 import re
 from dataclasses import dataclass, field
 from datetime import date
 from email import policy
 from pathlib import Path
 
+import requests
 from dateutil import parser as dateparser
 
 
@@ -146,3 +149,37 @@ def read_imap(host: str, user: str, app_password: str, mailbox: str = "INBOX") -
     finally:
         conn.logout()
     return docs
+
+
+def read_web_page(url: str, timeout: int = 30) -> EmailDoc:
+    """Fetch a public webpage (e.g. a school's academic-calendar page) and wrap
+    its visible text as an EmailDoc, so it flows through the same extractor and
+    ledger as a forwarded email.
+
+    There's no Message-ID to key idempotency on, so `message_id` is a hash of
+    the extracted text instead: unchanged page -> same id -> skipped on
+    re-runs; an edited page gets a new id -> reprocessed, and its `source_date`
+    (today, the fetch date) naturally wins the fold over stale facts from an
+    earlier scrape.
+    """
+    from bs4 import BeautifulSoup
+
+    resp = requests.get(
+        url, timeout=timeout,
+        headers={"User-Agent": "sunday-brief/0.1 (personal calendar aggregator)"},
+    )
+    resp.raise_for_status()
+    soup = BeautifulSoup(resp.text, "html.parser")
+
+    title = soup.title.string.strip() if soup.title and soup.title.string else url
+    lines = [line.strip() for line in soup.get_text(separator="\n").split("\n")]
+    body = "\n".join(line for line in lines if line and line != "\u200b")
+
+    digest = hashlib.sha1(body.encode("utf-8")).hexdigest()[:16]
+    return EmailDoc(
+        message_id=f"web-{digest}",
+        source_from=url,
+        source_subject=title,
+        source_date=date.today(),
+        body=body,
+    )

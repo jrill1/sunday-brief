@@ -24,6 +24,10 @@ def _daterange(start: date, end: date):
 
 
 def _title(school: str, type_: str, active: int, reason: str) -> str:
+    if type_ == "note":
+        if active == 0:
+            return f"{school} note (canceled) — {reason}"
+        return f"{school} note — {reason}"
     if active == 0:
         return f"{school} open — {reason}"
     verb = "closed" if type_ == "closure" else "half day"
@@ -107,9 +111,23 @@ def _beats(a: dict, b: dict) -> bool:
 
 
 def effective_closures(rows: list[dict], start: date, end: date) -> list[dict]:
-    """Winning rows that are closed/reduced (active:1) within [start, end]."""
+    """Winning rows that are closed/reduced (active:1) within [start, end].
+
+    Excludes `note` rows — those are logistics, not coverage gaps.
+    """
     out = []
     for (school, d), row in fold(rows).items():
-        if row["active"] == 1 and start.isoformat() <= d <= end.isoformat():
+        if (row["active"] == 1 and row["type"] in ("closure", "partial_closure")
+                and start.isoformat() <= d <= end.isoformat()):
+            out.append(row)
+    return sorted(out, key=lambda r: (r["date"], r["school"]))
+
+
+def effective_notes(rows: list[dict], start: date, end: date) -> list[dict]:
+    """Winning `note` rows still in effect (active:1) within [start, end]."""
+    out = []
+    for (school, d), row in fold(rows).items():
+        if (row["active"] == 1 and row["type"] == "note"
+                and start.isoformat() <= d <= end.isoformat()):
             out.append(row)
     return sorted(out, key=lambda r: (r["date"], r["school"]))

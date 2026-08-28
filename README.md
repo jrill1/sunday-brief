@@ -78,6 +78,22 @@ once-a-term chore since closures are known months ahead.
 LibCal / LibNet page. For WordPress calendars, try `type: wp-events` against the
 site root, fall back to `/feed/` as `type: rss`.
 
+**Closure-email drop-box.** A separate pipeline (`sundaybrief.closures`) reads
+school closure emails and extracts structured facts into `data/closures.jsonl`
+— see `docs/closure-ledger.md` for the design. To point it at a real inbox
+instead of the local `.eml` test fixtures:
+
+1. Create a dedicated Gmail account (or reuse an existing throwaway one) and
+   forward/CC school emails to it. Read-only usage — the code only ever fetches.
+2. Turn on 2-Step Verification for that account, then generate an App Password
+   at `myaccount.google.com/apppasswords`.
+3. Add `DROPBOX_IMAP_USER` (the address) and `DROPBOX_IMAP_PASSWORD` (the
+   16-char App Password, not the real account password) to `.env`.
+4. Test it: `python -m sundaybrief.closures.run_extract --source imap --dry-run`
+
+This pipeline isn't reconciled into the weekly brief yet — `run.py` doesn't
+read `data/closures.jsonl` — that's the next piece to build.
+
 ## Summary style
 
 In `config/sources.yaml`:
@@ -115,8 +131,10 @@ in) — hence the LaunchAgent, not a LaunchDaemon.
 
 - `ingest.headless` (Playwright) for JS-only calendars — raises `NotImplementedError`
   by design; check for a feed first.
-- Throwaway-inbox parsing (IMAP / Gmail read-only) isn't built yet.
 - `wp-events` is best-effort; plugin versions vary.
+- The closure ledger (`data/closures.jsonl`) isn't read by the weekly brief yet —
+  it's populated by `sundaybrief.closures.run_extract` but not reconciled against
+  calendar events. See "Out of scope here (later)" in `docs/closure-ledger.md`.
 
 ## Test
 
