@@ -1,0 +1,267 @@
+Delivered-To: sunday.brief.dropbox@gmail.com
+Received: by 2002:a05:6a21:600c:b0:3d2:321:f291 with SMTP id so12csp467382pzb;
+        Thu, 27 Aug 2026 08:51:26 -0700 (PDT)
+X-Received: by 2002:a53:e022:0:b0:668:8b91:cfc7 with SMTP id 956f58d0204a3-66d2565aac1mr4456071d50.9.1787845885941;
+        Thu, 27 Aug 2026 08:51:25 -0700 (PDT)
+ARC-Seal: i=2; a=rsa-sha256; t=1787845885; cv=pass;
+        d=google.com; s=arc-20260327;
+        b=WuQ0uYkHfrSsUMiEXN8wU9xAt4hnnvzi80cN1mdbCiFnH1SZza6mc6TtMNsrK424uX
+         +9R9cMoqW6WdzkrlJG2rNQZidfI8VBOabwjMB+xKXyPxcK0wAnN6N2cPer2/WMU/1CcJ
+         odlAam26XNFRyVgCeKVvd+f5EfaR2Xzq47DDi3CrQX47tRW/lEJHuHRl5mHh7xtljsKS
+         SED7QmcUFcmYRPse32ZD7lsQHwsMEnyeq67WZpoZBTrxe8cXr8E7baQvAEJW5Qq9wDL+
+         ALTGoSlagfHNTZkLg6smAmeHhjToKQiJ7jvt5jX+FNmHvM21bbkELvnMotDuQcC7IymT
+         kLKw==
+ARC-Message-Signature: i=2; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20260327;
+        h=to:subject:message-id:date:from:in-reply-to:references:mime-version
+         :dkim-signature;
+        bh=WCK4qS81uINXgMHvL6t3ubN6eL400ryH20Tj4hOMFo0=;
+        fh=uV1y01qujwXpl3Q+vOY2JZB8TEnIoS2JytsM6o1qCuM=;
+        b=dyjJwvAsH2QmwGXRoM4WPJGfPj1cBr2laN6F6/G3WYfWc0f9SEWlere7GHkFTcg1Hf
+         b3QVWZYpZmpl5b7OTlBaxBGzy+ZVJglsf39qwpm/rThdeIy0Fh2Lcd0e+JTeBa8Zbe0j
+         RosX32uDYMppk6nZxTNxysGWb1riXr2yszZTnl/aiJxwPypK5XGLLadq3iWbJvlk1CPa
+         Y6203I1Hls1f26eXa/GKuyUbjd9esUX9C9ImPFkifW4fcP+mMoEZF5gDwrkNH4g7x5gk
+         jROas2VTKDZuuNxL3AjLMlFAbLf3V2GvXdycfXy7+Mc641IJpoPPKQho/BLNbs6OVME0
+         XGbA==;
+        dara=google.com
+ARC-Authentication-Results: i=2; mx.google.com;
+       dkim=pass header.i=@gmail.com header.s=20251104 header.b=cOyogrkK;
+       arc=pass (i=1);
+       spf=pass (google.com: domain of justinrill@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=justinrill@gmail.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com;
+       dara=pass header.i=@gmail.com
+Return-Path: <justinrill@gmail.com>
+Received: from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41])
+        by mx.google.com with SMTPS id 956f58d0204a3-66d245efde0sor5331230d50.4.2026.08.27.08.51.25
+        for <sunday.brief.dropbox@gmail.com>
+        (Google Transport Security);
+        Thu, 27 Aug 2026 08:51:25 -0700 (PDT)
+Received-SPF: pass (google.com: domain of justinrill@gmail.com designates 209.85.220.41 as permitted sender) client-ip=209.85.220.41;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@gmail.com header.s=20251104 header.b=cOyogrkK;
+       arc=pass (i=1);
+       spf=pass (google.com: domain of justinrill@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=justinrill@gmail.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com;
+       dara=pass header.i=@gmail.com
+ARC-Seal: i=1; a=rsa-sha256; t=1787845885; cv=none;
+        d=google.com; s=arc-20260327;
+        b=FulmUOpv+NslPw/zmo6RPUSsqRgqgc0GykWfci3Jd0J5auif+eJtz427KPWHVZHKAd
+         ZFqKTQN3KgFPK8z833/kqEIUzCyckIkJTg+0zjwvqPYzJGN2GHUuWuN1Hou1Ero1DoVF
+         jHaxqnA34cJcg4aJ0Cp/tiePpHLvABbtKModx9lP1sPamGsxata7N/4OLisZRAyL+J3l
+         XnubbnqAgE+zAl+lOVwcp6t5nnNFf7tzuRkNMn4a8T3XbmEpemsUEqP4OYZ9q6xsdXXq
+         /WgqifFWOC7suiVT59/yR61BKUAOgc7PewbqkpxQFnZIFlK2FA4+NhFNSrNrq0lGcqNn
+         5NLg==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20260327;
+        h=to:subject:message-id:date:from:in-reply-to:references:mime-version
+         :dkim-signature;
+        bh=WCK4qS81uINXgMHvL6t3ubN6eL400ryH20Tj4hOMFo0=;
+        fh=uV1y01qujwXpl3Q+vOY2JZB8TEnIoS2JytsM6o1qCuM=;
+        b=MX8dxORJAwG270ET+sjXx9eajixkUJ8z8xMEhdDVev1Xzr/4QmoldeEpxsAkKFJaWE
+         8pTagWtr51xHwXjeyWLdMHrT/oZD0Dz8gY0bsemXiNPhUuT++gmUsd0xhXZzqx4TLKbv
+         T5XblcR27h2LDXfXBC+oB4I7chh9b1rJlRHaH1jbM+hssjZp6+JvSdphLgnn2TpkXUHY
+         tsw1fbYHmgm6a0t9vP4NzXhl+uOqvdJs3AWs9Z89VW0Qhkl0uxdCUPipJ0RGUQZeoA5+
+         xfcegV1C5rKKfzdwVdl7kW+C5A9d0NY0Bx1OhOELjBo/FUUyeSlt9mYG3konjWaZkRPa
+         9OQA==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com; arc=none
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20251104; t=1787845885; x=1788450685; dara=google.com;
+        h=content-type:to:subject:message-id:date:from:in-reply-to:references
+         :mime-version:from:to:cc:subject:date:message-id:reply-to
+         :content-type;
+        bh=WCK4qS81uINXgMHvL6t3ubN6eL400ryH20Tj4hOMFo0=;
+        b=cOyogrkKAaSn01HQlxe0+FKBAKKN8Vb035Gu5CaaPRPEw0lmC2ZnJGVraZuToESheq
+         yWBmHjpQ5h8EEifuFE1H2/HB3UNJxY9eFkY3HX3+Q6mGWjH41lHBAvwoIToMsDLFGz+6
+         K0BRBO+CLV6CBplcndLx/mbeULKWPU/0T3iwEmvzKAoYqOz7I72LF/XT6/g6ZoTL6U7s
+         Al6KiEVUx8V+AlPVrUfkoCh/NSnqnRoqmabe2ULiwVpQq5ewvFuMt59JTZegzVpXho+S
+         VO1q/rVe6FwdKJQMX8VfpVfDixXmSOZgCxR53y9d1ncBNlWHDlDF1G6sNfhZAvCARH7D
+         EJLw==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20251104; t=1787845885; x=1788450685;
+        h=content-type:to:subject:message-id:date:from:in-reply-to:references
+         :mime-version:x-gm-gg:x-gm-message-state:from:to:cc:subject:date
+         :message-id:reply-to:content-type;
+        bh=WCK4qS81uINXgMHvL6t3ubN6eL400ryH20Tj4hOMFo0=;
+        b=onXpHHXRbS5zrEk4YbU6sAYAmNAXOHVHObGDkzz6/h7QmRX1l8Rq8y/ru6agsQ7RZQ
+         Bm/xdbsgNswCdHlKDxplO4ZGMh+7suJvp87tv3IdUJSCgXe7bk5EGAjMRxgq7YTccCpu
+         ZZtsQdOeCioTqLue/qdEj4mabMVgra8HzZOQ1dNwDaI9KLDKguTGB4K3w1j0oOPp0L7l
+         s59v58F2ncoQ5YtsPD9IiI+zQKzu5X+YpdoOnguO0brhoievRQLQ1gMtf9Jkrt3PLSgk
+         cDQOgmyIna3849fIx8r9n9CnCglqEJkLmYieJB23QcM8tEaTT8bX3JCrwHK70nofMtVr
+         6OoQ==
+X-Gm-Message-State: AFuF++ka1te5Pcb7wSTi7Na1e/WBhL7qHSjmeHu0MJyFWnkqyjCy2ibp
+	M1Hx+uI5zzI0/NXnLZyHIGp+4SR0t2C+Z/NCVMQyWOpH0+Vo758wEDFkJvHllG2x82w5N6DwNj6
+	m67Nac9Yt03n17EiwOi6Yad/VGaXlyuehD0Mn
+X-Gm-Gg: AR+sD11vvL1uTASMXUiOboMmJWyxRPIG4mgpHMqgwuq298hHtPmt8JZYxJo2dkdZ6xO
+	Au3E12O3xeSb0fPIBHFhRPCaTvYmBj37iaU6Pc956m2yudepAEgWXRKeCTF83LvNzQbEpz+z1uV
+	utW36Wu4tw6TLUk59jz46Xyr5E+2BIQGabHVhDG2bJfX26ewtVed8bWfqKzoislU5yBqUEyI5sL
+	TVNYP5nIJ3JD6DyzQ0/+N4RcyYBZEoMSTzKZBrA+XM3ZDlAxMPDZy20EXkBkiUIoarQUqaNh71f
+	feybI+/ShIEWIojdkr5Y0PlRnZxx5fwOqMoBxTen4WlsTA==
+X-Received: by 2002:a53:da52:0:b0:66c:7a77:1edf with SMTP id
+ 956f58d0204a3-66d257c94a3mr4134830d50.48.1787845885296; Thu, 27 Aug 2026
+ 08:51:25 -0700 (PDT)
+MIME-Version: 1.0
+References: <1csBYxZCTWKxeiaLNjM7XQ@geopod-ismtpd-78>
+In-Reply-To: <1csBYxZCTWKxeiaLNjM7XQ@geopod-ismtpd-78>
+From: Justin Rill <justinrill@gmail.com>
+Date: Thu, 27 Aug 2026 11:51:10 -0400
+X-Gm-Features: AcwNN1WbhCjqNyQCb4Gi1GazkwFKRZEQLYATrxrDCna4V_aVEpRkZPbSpC5kivg
+Message-ID: <CACtDR0oFPTNvDiRxyo-TyY3A4txwOzYaBoY_e5FBWxLQVxWFxg@mail.gmail.com>
+Subject: Fwd: Professional Development Day Cancellation
+To: sunday.brief.dropbox@gmail.com
+Content-Type: multipart/alternative; boundary="000000000000e803e2065a094e88"
+
+--000000000000e803e2065a094e88
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+---------- Forwarded message ---------
+From: <DMillburnNJ@goddardschools.com>
+Date: Wed, Jul 15, 2026 at 8:16=E2=80=AFAM
+Subject: Professional Development Day Cancellation
+To: <maria.ann.grimaldi@gmail.com>, <justinrill@gmail.com>
+
+
+Dear Millburn Families,
+Good morning! We hope this message finds you well.
+We wanted to share an update regarding our school calendar for this month.
+Our *Professional Development Day previously scheduled for Thursday, July
+30, 2026, has been canceled*, and the school will now be *open for regular
+operating hours*.
+With the upcoming changes to our 2026=E2=80=932027 calendar, we felt it was
+important to provide families with a full work week, especially after the
+recent holidays and scheduled closures that resulted in several shortened
+weeks.
+We appreciate your continued trust, support, and partnership, and we hope
+this adjustment helps make your schedules a little easier.
+If you have any questions, please don't hesitate to reach out.
+Best,
+Millburn Administration Team
+
+
+
+
+
+The Goddard School of Millburn
+National Rookie of the Year | Circle of Excellence Awardee
+
+Instagram: The Goddard School of Millburn
+<https://u6663819.ct.sendgrid.net/ls/click?upn=3Du001.oCNILiHHB85Kh2ybGA2pn=
+3eW1IO-2FnxkLuc4KM-2F0jjfeje8zThhSgR3qRK-2Bn6MB8Ym6mumj07kLW7AI6oPznrDQ-3D-=
+3DBuOE_7q2-2F1LWzHNsPsrpxpegg0jcUcv0oc2Dm-2Fmg0-2FziiKdyw9Gb3ms6stBj2UVD2Kj=
+Kq-2BgxxyX-2B62tbYFKA4FCAPLpQIg5L1iECb41q9qKXMFNOQAOHwrr0ZgvV10XU8GDBNDY5AH=
+tCN-2BrpF9-2FGIiu-2BAB6VQ-2FLUqiyxOBf40fPZTd6-2BmdJebRAyNudgDr7zHt41Z50zbJN=
+9XPIdR-2BnybFb-2FESg-3D-3D>
+
+Facebook: The Goddard School of Millburn
+<https://u6663819.ct.sendgrid.net/ls/click?upn=3Du001.oCNILiHHB85Kh2ybGA2pn=
+z-2FPJ-2FwJZyBiAROGKlXkoOlDfB3N5Yd1fU5KYvuEubLSp7r7a93uqRiGUFYqoFPctw-3D-3D=
+srtT_7q2-2F1LWzHNsPsrpxpegg0jcUcv0oc2Dm-2Fmg0-2FziiKdyw9Gb3ms6stBj2UVD2KjKq=
+HOfZ2xhExG7AvohhWyvw9ZnATmhN1E5dMzuEORDL7NSRApX4-2B3i9BN-2FArx2HSJ6AbetpldX=
+UsfP0c8LUJYEj43xt00XKK-2FUwH5BrkRxCFYA3A-2B35G89FFjYYPzzVPReQ4kOqG5-2BYUjeN=
+Jq113SPE1A-3D-3D>
+
+--000000000000e803e2065a094e88
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"ltr"><br><br><div class=3D"gmail_quote gmail_quote_container"><=
+div dir=3D"ltr" class=3D"gmail_attr">---------- Forwarded message ---------=
+<br>From: <span dir=3D"auto">&lt;<a href=3D"mailto:DMillburnNJ@goddardschoo=
+ls.com">DMillburnNJ@goddardschools.com</a>&gt;</span><br>Date: Wed, Jul 15,=
+ 2026 at 8:16=E2=80=AFAM<br>Subject: Professional Development Day Cancellat=
+ion<br>To:  &lt;<a href=3D"mailto:maria.ann.grimaldi@gmail.com">maria.ann.g=
+rimaldi@gmail.com</a>&gt;,  &lt;<a href=3D"mailto:justinrill@gmail.com">jus=
+tinrill@gmail.com</a>&gt;<br></div><br><br><div style=3D"font-size:14px;fon=
+t-family:&#39;Trebuchet MS&#39;,Trebuchet,&#39;Lucida Grande&#39;,&#39;Luci=
+da Sans Unicode&#39;,&#39;Lucida Sans&#39;,Tahoma,sans-serif!important"><di=
+v style=3D"font-size:12pt;border:0px;line-height:inherit;font-family:Aptos,=
+Aptos_EmbeddedFont,Aptos_MSFontService,Calibri,Helvetica,sans-serif,serif,E=
+mojiFont;font-size-adjust:inherit;font-kerning:inherit;font-variant-alterna=
+tes:inherit;font-variant-ligatures:inherit;font-variant-numeric:inherit;fon=
+t-variant-east-asian:inherit;font-feature-settings:inherit;margin:1em 0px;p=
+adding:0px;vertical-align:baseline">Dear Millburn Families,</div>
+<div style=3D"font-size:12pt;border:0px;line-height:inherit;font-family:Apt=
+os,Aptos_EmbeddedFont,Aptos_MSFontService,Calibri,Helvetica,sans-serif,seri=
+f,EmojiFont;font-size-adjust:inherit;font-kerning:inherit;font-variant-alte=
+rnates:inherit;font-variant-ligatures:inherit;font-variant-numeric:inherit;=
+font-variant-east-asian:inherit;font-feature-settings:inherit;margin:1em 0p=
+x;padding:0px;vertical-align:baseline">Good morning! We hope this message f=
+inds you well.</div>
+<div style=3D"font-size:12pt;border:0px;line-height:inherit;font-family:Apt=
+os,Aptos_EmbeddedFont,Aptos_MSFontService,Calibri,Helvetica,sans-serif,seri=
+f,EmojiFont;font-size-adjust:inherit;font-kerning:inherit;font-variant-alte=
+rnates:inherit;font-variant-ligatures:inherit;font-variant-numeric:inherit;=
+font-variant-east-asian:inherit;font-feature-settings:inherit;margin:1em 0p=
+x;padding:0px;vertical-align:baseline">We wanted to share an update regardi=
+ng our school calendar for this month. Our=C2=A0<strong>Professional Develo=
+pment Day previously scheduled for Thursday, July 30, 2026, has been cancel=
+ed</strong>, and the school will now be=C2=A0<strong>open for regular opera=
+ting hours</strong>.</div>
+<div style=3D"font-size:12pt;border:0px;line-height:inherit;font-family:Apt=
+os,Aptos_EmbeddedFont,Aptos_MSFontService,Calibri,Helvetica,sans-serif,seri=
+f,EmojiFont;font-size-adjust:inherit;font-kerning:inherit;font-variant-alte=
+rnates:inherit;font-variant-ligatures:inherit;font-variant-numeric:inherit;=
+font-variant-east-asian:inherit;font-feature-settings:inherit;margin:1em 0p=
+x;padding:0px;vertical-align:baseline">With the upcoming changes to our 202=
+6=E2=80=932027 calendar, we felt it was important to provide families with =
+a full work week, especially after the recent holidays and scheduled closur=
+es that resulted in several shortened weeks.</div>
+<div style=3D"font-size:12pt;border:0px;line-height:inherit;font-family:Apt=
+os,Aptos_EmbeddedFont,Aptos_MSFontService,Calibri,Helvetica,sans-serif,seri=
+f,EmojiFont;font-size-adjust:inherit;font-kerning:inherit;font-variant-alte=
+rnates:inherit;font-variant-ligatures:inherit;font-variant-numeric:inherit;=
+font-variant-east-asian:inherit;font-feature-settings:inherit;margin:1em 0p=
+x;padding:0px;vertical-align:baseline">We appreciate your continued trust, =
+support, and partnership, and we hope this adjustment helps make your sched=
+ules a little easier.</div>
+<div style=3D"font-size:12pt;border:0px;line-height:inherit;font-family:Apt=
+os,Aptos_EmbeddedFont,Aptos_MSFontService,Calibri,Helvetica,sans-serif,seri=
+f,EmojiFont;font-size-adjust:inherit;font-kerning:inherit;font-variant-alte=
+rnates:inherit;font-variant-ligatures:inherit;font-variant-numeric:inherit;=
+font-variant-east-asian:inherit;font-feature-settings:inherit;margin:1em 0p=
+x;padding:0px;vertical-align:baseline">If you have any questions, please do=
+n&#39;t hesitate to reach out.</div>
+<div style=3D"font-size:12pt;border:0px;line-height:inherit;font-family:Apt=
+os,Aptos_EmbeddedFont,Aptos_MSFontService,Calibri,Helvetica,sans-serif,seri=
+f,EmojiFont;font-size-adjust:inherit;font-kerning:inherit;font-variant-alte=
+rnates:inherit;font-variant-ligatures:inherit;font-variant-numeric:inherit;=
+font-variant-east-asian:inherit;font-feature-settings:inherit;margin:1em 0p=
+x;padding:0px;vertical-align:baseline">Best,</div>
+<div style=3D"font-size:12pt;border:0px;line-height:inherit;font-family:Apt=
+os,Aptos_EmbeddedFont,Aptos_MSFontService,Calibri,Helvetica,sans-serif,seri=
+f,EmojiFont;font-size-adjust:inherit;font-kerning:inherit;font-variant-alte=
+rnates:inherit;font-variant-ligatures:inherit;font-variant-numeric:inherit;=
+font-variant-east-asian:inherit;font-feature-settings:inherit;margin:1em 0p=
+x;padding:0px;vertical-align:baseline">Millburn Administration Team</div>
+<br></div><br><br><p>=C2=A0</p>
+<p><img alt=3D"" size=3D"957306" height=3D"33" width=3D"34" style=3D"color:=
+inherit;font:inherit;border:0px;margin:0px;padding:0px;vertical-align:basel=
+ine;width:34px;height:33px;min-height:auto;min-width:auto"></p>
+<p>The Goddard School of Millburn<br>
+National Rookie of the Year | Circle of Excellence Awardee</p>
+<p>Instagram:=C2=A0<a href=3D"https://u6663819.ct.sendgrid.net/ls/click?upn=
+=3Du001.oCNILiHHB85Kh2ybGA2pn3eW1IO-2FnxkLuc4KM-2F0jjfeje8zThhSgR3qRK-2Bn6M=
+B8Ym6mumj07kLW7AI6oPznrDQ-3D-3DBuOE_7q2-2F1LWzHNsPsrpxpegg0jcUcv0oc2Dm-2Fmg=
+0-2FziiKdyw9Gb3ms6stBj2UVD2KjKq-2BgxxyX-2B62tbYFKA4FCAPLpQIg5L1iECb41q9qKXM=
+FNOQAOHwrr0ZgvV10XU8GDBNDY5AHtCN-2BrpF9-2FGIiu-2BAB6VQ-2FLUqiyxOBf40fPZTd6-=
+2BmdJebRAyNudgDr7zHt41Z50zbJN9XPIdR-2BnybFb-2FESg-3D-3D" target=3D"_blank">=
+The Goddard School of Millburn</a></p>
+<p>Facebook:=C2=A0<a href=3D"https://u6663819.ct.sendgrid.net/ls/click?upn=
+=3Du001.oCNILiHHB85Kh2ybGA2pnz-2FPJ-2FwJZyBiAROGKlXkoOlDfB3N5Yd1fU5KYvuEubL=
+Sp7r7a93uqRiGUFYqoFPctw-3D-3DsrtT_7q2-2F1LWzHNsPsrpxpegg0jcUcv0oc2Dm-2Fmg0-=
+2FziiKdyw9Gb3ms6stBj2UVD2KjKqHOfZ2xhExG7AvohhWyvw9ZnATmhN1E5dMzuEORDL7NSRAp=
+X4-2B3i9BN-2FArx2HSJ6AbetpldXUsfP0c8LUJYEj43xt00XKK-2FUwH5BrkRxCFYA3A-2B35G=
+89FFjYYPzzVPReQ4kOqG5-2BYUjeNJq113SPE1A-3D-3D" target=3D"_blank">The Goddar=
+d School of Millburn</a></p>
+<p>=C2=A0</p>
+<p>=C2=A0</p><img src=3D"https://u6663819.ct.sendgrid.net/wf/open?upn=3Du00=
+1.2-2Fh-2Bjl0Yi-2FJXJ4EduyCorHZnQ5cVMZhLVg36QFgleJ6y09u020ySQntaP-2FHDXa5ks=
+TjVQH-2Bd57Frx5fRxWnqV53DONTY1dcE34RKdPRsCxI4POP09TGFMp7g3jv1IEui4ns2-2FzCe=
+osJbP-2BJ7-2FUPD1Rl6sdRX1aXcWfSNTAjxmxaZlcmjk1Bf3YiSmHxusQEvwedT5TdoHj94-2B=
+C-2FLP5fVDxQO7CVqgtKPSgRy4jaanHo-3D" alt=3D"" width=3D"1" height=3D"1" bord=
+er=3D"0" style=3D"height:1px!important;width:1px!important;border-width:0!i=
+mportant;margin-top:0!important;margin-bottom:0!important;margin-right:0!im=
+portant;margin-left:0!important;padding-top:0!important;padding-bottom:0!im=
+portant;padding-right:0!important;padding-left:0!important">
+</div></div>
+
+--000000000000e803e2065a094e88--

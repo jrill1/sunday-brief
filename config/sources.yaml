@@ -22,16 +22,23 @@ sources:
     secret: ICAL_ME_PERSONAL
 
   # ---- Spouse (uncomment once yours works) ------------------------------
-  # - name: "Spouse — work"
-  #   type: ical
-  #   category: work
-  #   person: spouse
-  #   secret: ICAL_SPOUSE_WORK
-  # - name: "Spouse — personal"
-  #   type: ical
-  #   category: personal
-  #   person: spouse
-  #   secret: ICAL_SPOUSE_PERSONAL
+  - name: "Spouse — work"
+    type: ical
+    category: work
+    person: spouse
+    secret: ICAL_SPOUSE_WORK
+  - name: "Spouse — personal"
+    type: ical
+    category: personal
+    person: spouse
+    secret: ICAL_SPOUSE_PERSONAL
+
+    # ---- Daycare ----------------------------------------------------------
+  - name: "Brightwheel (ChildA)"
+    type: ical
+    category: daycare
+    child: ChildA
+    secret: ICAL_BRIGHTWHEEL
 
   # Daycare + local sources come later — see config/sources.example.yaml for
   # the full menu of source types.

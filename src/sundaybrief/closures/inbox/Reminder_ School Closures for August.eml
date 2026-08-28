@@ -1,0 +1,224 @@
+Delivered-To: sunday.brief.dropbox@gmail.com
+Received: by 2002:a05:6a21:600c:b0:3d2:321:f291 with SMTP id so12csp467008pzb;
+        Thu, 27 Aug 2026 08:51:10 -0700 (PDT)
+X-Received: by 2002:a05:690c:6a0a:b0:809:ae5:1d2f with SMTP id 00721157ae682-85d6743fc80mr1058147b3.9.1787845870677;
+        Thu, 27 Aug 2026 08:51:10 -0700 (PDT)
+ARC-Seal: i=2; a=rsa-sha256; t=1787845870; cv=pass;
+        d=google.com; s=arc-20260327;
+        b=DDioHTAuemPptBe5n09jl89a0xN8ccQjAZgxUXgSvLLiRwivOij0kh2tHTtpDmPh1o
+         sw4zo+OkXiepAMkkedVGnW2pjI4+GYDohw+FjL6u0nsWgNSx9xVSAkVXxwZAkvV94EPG
+         Na1jWRxBPCaVt7UkS7rnrL9/nS0OZyQZnrFNz7Q2VdLME+ulECIDFa3SxduZpzX+/QHq
+         r4Ma2fkmBBna7Hgnk5Ws52GFY7QMqfotYUJ8oQ6x1phKB0wry2bRnnaTUToHHOqOflzG
+         c/N2EOk4af3h2SbGFUNVlAhRspEggK1xJMBcDL3LUaQ3H9b5jenPq9Vi92doBHlZEmuq
+         vqDQ==
+ARC-Message-Signature: i=2; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20260327;
+        h=to:subject:message-id:date:from:in-reply-to:references:mime-version
+         :dkim-signature;
+        bh=utLJQPOSHJmxiVhCESMICmUJ300gxjinm+3+hxO7lBY=;
+        fh=uV1y01qujwXpl3Q+vOY2JZB8TEnIoS2JytsM6o1qCuM=;
+        b=McGKi0MHFrV27m69C1w6nU/UhT4nK7RdX3OWIKuzQXaH7E7Oscj1Ks1FxuI5llamFr
+         HqWThwLuF4NUvBf4oNaPNSzNO99L3L5FQq3WBnzEHLKFL8iWbnpNRtY8KNHn1wg5MaJi
+         PKL3FGZLAzoWEuHaU/3QG6F7a0djwh/O9wuxDjMMadHFJkHbRa9RSw/1y+mLgR7NToVM
+         wdOsadLEwl8EZtZSjWz9s4E7z8K4JBRpXtrZf3J3LdgJxzR/A4ADDJa0OXcqXf2LlUlV
+         FEw2h/DjTP1BQVAa2heYxZvHAoD/VrMx4wBxQ8KXfJzHay4+ahG4I/BhBhH4fei4BMLT
+         05BA==;
+        dara=google.com
+ARC-Authentication-Results: i=2; mx.google.com;
+       dkim=pass header.i=@gmail.com header.s=20251104 header.b=Ey1U+m6p;
+       arc=pass (i=1);
+       spf=pass (google.com: domain of justinrill@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=justinrill@gmail.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com;
+       dara=pass header.i=@gmail.com
+Return-Path: <justinrill@gmail.com>
+Received: from mail-sor-f41.google.com (mail-sor-f41.google.com. [209.85.220.41])
+        by mx.google.com with SMTPS id 00721157ae682-8570c4ae880sor79405617b3.9.2026.08.27.08.51.10
+        for <sunday.brief.dropbox@gmail.com>
+        (Google Transport Security);
+        Thu, 27 Aug 2026 08:51:10 -0700 (PDT)
+Received-SPF: pass (google.com: domain of justinrill@gmail.com designates 209.85.220.41 as permitted sender) client-ip=209.85.220.41;
+Authentication-Results: mx.google.com;
+       dkim=pass header.i=@gmail.com header.s=20251104 header.b=Ey1U+m6p;
+       arc=pass (i=1);
+       spf=pass (google.com: domain of justinrill@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=justinrill@gmail.com;
+       dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com;
+       dara=pass header.i=@gmail.com
+ARC-Seal: i=1; a=rsa-sha256; t=1787845870; cv=none;
+        d=google.com; s=arc-20260327;
+        b=WMIlTbx0WQ9A0tl43wEdX3zeTmIwcf7AutfGLlol/vN2EwtSDwull7c6AaAMLlXGfl
+         NK6iWk3tBUcf13uC5YTwLWblDKvTWWq/jS7kKlSfyARNPXS6fV4tJxBbo9YcS8POK5ZO
+         H0Xc1/Qp+H6UGH0Zgzk7VvOZps+9Cf1QzM99qhtLDU7n6+i9XWJ7zA1Pjf9G1n0mGx+C
+         v3QnxmyCi5EjlnipKshXEZkHkcyDBtUX2+6CzyE4LVntNFtr0EuW8JPJtp0uVcMZqN0n
+         xi/808W3e1J1f5wvRlJDzc5POWKbHB+oOYaMFVdV/RLAG2ncETtTdWUyQsnOfT9DOvOi
+         9vRA==
+ARC-Message-Signature: i=1; a=rsa-sha256; c=relaxed/relaxed; d=google.com; s=arc-20260327;
+        h=to:subject:message-id:date:from:in-reply-to:references:mime-version
+         :dkim-signature;
+        bh=utLJQPOSHJmxiVhCESMICmUJ300gxjinm+3+hxO7lBY=;
+        fh=uV1y01qujwXpl3Q+vOY2JZB8TEnIoS2JytsM6o1qCuM=;
+        b=euVaTAgu/VKbl2Agu9MyJTXgGXMLs4+QrheuDPk8kit6bHZ7kKjNruWlqc3y7YKsUx
+         tu8TaCIsUWny6+6t4dCANndGPxq50oB45psd3miLW1uw0hmWN+Yb4E861DwDxV5eoiUd
+         +1PxVYwgRheXvIxiEGd0qllvcVKxe3X+EtZVgOoIooZCGx7kRXoDNqe+nXg++tD8vjGp
+         La8y3bIGrs75v35jEQ8UtH+0SAxNOdiSjrwMokyIWwSmdMP7tt7TKMgN/+UbvT7o2LA6
+         JEywMNtq0cBcAPeELbztjWvFXY08NmSvEoyn1ItpVpwJOEu3cHuG7X3SFjzvhhuq0J+A
+         RHzQ==;
+        dara=google.com
+ARC-Authentication-Results: i=1; mx.google.com; arc=none
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=gmail.com; s=20251104; t=1787845870; x=1788450670; dara=google.com;
+        h=content-type:to:subject:message-id:date:from:in-reply-to:references
+         :mime-version:from:to:cc:subject:date:message-id:reply-to
+         :content-type;
+        bh=utLJQPOSHJmxiVhCESMICmUJ300gxjinm+3+hxO7lBY=;
+        b=Ey1U+m6pl7sNMouRxHuCnBDA1tXitV0l78msXiKZhfd4+dco5rgFYmtm2Z2yQCU51H
+         x4w98UqoHYlJflrTpiM/6HcC5iRG1gifd8c65tdaIzXNu+/0ellMbBHpp8hZ9XUn4Xal
+         2UWtrPv32e5R7UYVuVmUdPwtlIaaEXRiyAWzYLzWRG3b6JoqzpfAioC1/CGkdWXfEJ1b
+         dmPCvjV0eD38E+Knw7gVQ2O5UmC6a2ABknjeql+yYHWjsiMLQhmZ7o8VSq+4408GSmCA
+         mAyw6HDLltn93ps2LdVAN4wVzGFE4TaR+KLd0PjZHvpLLXaIi/Ad40rU6pDF2rMUuERI
+         KWpw==
+X-Google-DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed;
+        d=1e100.net; s=20251104; t=1787845870; x=1788450670;
+        h=content-type:to:subject:message-id:date:from:in-reply-to:references
+         :mime-version:x-gm-gg:x-gm-message-state:from:to:cc:subject:date
+         :message-id:reply-to:content-type;
+        bh=utLJQPOSHJmxiVhCESMICmUJ300gxjinm+3+hxO7lBY=;
+        b=Tsx4FRxhH9aGokX2PRguTPgMycYVOhWjlDgsyx2Na0jw2Z/bHkQP8obo6qz8Vfq/3U
+         0Bm6mEz5Fhd024/1bAtgbzpJgblAKS1iH9dnnuMbkV50OFe2NHIadnifpmwjTHCz7Bq5
+         UL9Lxj5Bn/CgzyqPwXLbq4yo2I7UuPKApR/8u6u3VkKSi7Eb7AxPDHCtkyNH6TrhZQBa
+         G43XnM8zaUcrWzaDTf1ugXmL73rbJHO66NxCwkKYkIctieFZB5suRalUK7fi+iBzbC5w
+         3nSRIOZx8NEfqeLLCmlsvQAJvRlT5Cx5iUpd0m3Z4m/p1jekIjpUek3DqGhcpqZKMeDg
+         23Vg==
+X-Gm-Message-State: AFuF++nFqtL1s8uXThNVCrTEd2CGf0+Ipa3JjKktYp5Y1Z/w2tyBKWPX
+	gxDZwQEdXq7CGgFRgtBP/MEbenlWK7cFhCttr4fftmcdjLNRdlcnFztGxNL229Pakh6HERrXsFO
+	7BAbLz2qX+65WVKDwXe+d7P4d3TnylH8gkmb8
+X-Gm-Gg: AR+sD11mnVtiEb1gTAwoh2i6FFxezmMqkUCJ6sqNmAaADsewCZ+oDCIVyR3f7yuyf8S
+	EdmXGOh7uJChHE/ahtSgG41NXblKp3vWZ4KPihi7FplJsWQXHszvZHbI/lpvxTSr7lD8cIBu8bg
+	yzsmGYC8fMupAPmuLDd3FDYbryD4vNi+BNgAekBo7mcZAPFqvs4oQEfqcZM/gwoOFdVTa68UHYG
+	jgfbWFT7xTLugGQ6FbboDABvKZWhaAWiMjfDCG0rNvE3dzuVDKZX4JE12Gg8RZNwmw6d9bmfspo
+	+gIx4ZIp1zWa+d0H5o48IV//iabkmIFgHriF9UOVHKJAhA==
+X-Received: by 2002:a05:690c:39a:b0:845:2054:2374 with SMTP id
+ 00721157ae682-85d6c4fbc81mr527617b3.31.1787845868568; Thu, 27 Aug 2026
+ 08:51:08 -0700 (PDT)
+MIME-Version: 1.0
+References: <0nBjdyZZTs6UtBrB840zBg@geopod-ismtpd-29>
+In-Reply-To: <0nBjdyZZTs6UtBrB840zBg@geopod-ismtpd-29>
+From: Justin Rill <justinrill@gmail.com>
+Date: Thu, 27 Aug 2026 11:50:57 -0400
+X-Gm-Features: AcwNN1UrKJtRS3zb2-MgBmlrWMtNpyyNzcnlibtsYB3yOTS4cPM2XU5aSIJQziE
+Message-ID: <CACtDR0oynAjzxECP=ZLrcw75YSeB9+3mpvbbASiUKAeYyQ8HkA@mail.gmail.com>
+Subject: Fwd: Reminder: School Closures for August
+To: sunday.brief.dropbox@gmail.com
+Content-Type: multipart/alternative; boundary="000000000000e8c937065a094d8b"
+
+--000000000000e8c937065a094d8b
+Content-Type: text/plain; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+---------- Forwarded message ---------
+From: <DMillburnNJ@goddardschools.com>
+Date: Mon, Aug 3, 2026 at 2:10=E2=80=AFPM
+Subject: Reminder: School Closures for August
+To: <maria.ann.grimaldi@gmail.com>, <justinrill@gmail.com>
+
+
+Dear Millburn Families,
+
+I hope you are doing well and that everyone is enjoying their summer!
+
+This is just a friendly reminder that *The Goddard School of Millburn will
+be closed for Professional Development Days on Thursday, August 27, 2026,
+and Friday, August 28, 2026*.
+
+This was notated on our Summer calendars we sent out earlier in June. We
+wanted to provide another reminder well in advance so you have plenty of
+time to plan accordingly and mark these dates on your calendar. As the
+dates get closer, we will send another reminder.
+
+Thank you for your understanding and continued support. We look forward to
+seeing everyone back after the closure!
+
+Best,
+
+Alexa
+
+
+
+
+The Goddard School of Millburn
+National Rookie of the Year | Circle of Excellence Awardee
+
+Instagram: The Goddard School of Millburn
+<https://u6663819.ct.sendgrid.net/ls/click?upn=3Du001.oCNILiHHB85Kh2ybGA2pn=
+3eW1IO-2FnxkLuc4KM-2F0jjfeje8zThhSgR3qRK-2Bn6MB8Ym6mumj07kLW7AI6oPznrDQ-3D-=
+3DUUfW_7q2-2F1LWzHNsPsrpxpegg0jcUcv0oc2Dm-2Fmg0-2FziiKdxKXyQPDafLjf5tLxulCG=
+AzOKkVgegxEhqBBP2vBPF-2BilFBeoTgm5kPVhH0RfMert305VF2ApD0u-2FvlMy4o3wiotQzpS=
+PHrDzkdM1BofKK-2BNA36-2FD-2BALCh-2FOvf2m-2FIXzuNmvk9dw9Jo09H-2F1crakbtMCYK0=
+0sKlvr17gZs4ZeeAdQ-3D-3D>
+
+Facebook: The Goddard School of Millburn
+<https://u6663819.ct.sendgrid.net/ls/click?upn=3Du001.oCNILiHHB85Kh2ybGA2pn=
+z-2FPJ-2FwJZyBiAROGKlXkoOlDfB3N5Yd1fU5KYvuEubLSp7r7a93uqRiGUFYqoFPctw-3D-3D=
+B9hJ_7q2-2F1LWzHNsPsrpxpegg0jcUcv0oc2Dm-2Fmg0-2FziiKdxKXyQPDafLjf5tLxulCGAz=
+HJGjz8YjQytemVrJxELIIOq8qdzitp9zgIEjCce0jYoeQnze-2BehneifTEcy-2FxWbHDxbQkv8=
+qQXBXuqz4jFrmS2XiHUAJlgLI07IzD-2F-2F-2Fx2zqwfYCkq2FANv6BWc7wfjsu-2F3kMNuzrL=
+cndqm-2Bwejing-3D-3D>
+
+--000000000000e8c937065a094d8b
+Content-Type: text/html; charset="UTF-8"
+Content-Transfer-Encoding: quoted-printable
+
+<div dir=3D"ltr"><br><br><div class=3D"gmail_quote gmail_quote_container"><=
+div dir=3D"ltr" class=3D"gmail_attr">---------- Forwarded message ---------=
+<br>From: <span dir=3D"auto">&lt;<a href=3D"mailto:DMillburnNJ@goddardschoo=
+ls.com">DMillburnNJ@goddardschools.com</a>&gt;</span><br>Date: Mon, Aug 3, =
+2026 at 2:10=E2=80=AFPM<br>Subject: Reminder: School Closures for August<br=
+>To:  &lt;<a href=3D"mailto:maria.ann.grimaldi@gmail.com">maria.ann.grimald=
+i@gmail.com</a>&gt;,  &lt;<a href=3D"mailto:justinrill@gmail.com">justinril=
+l@gmail.com</a>&gt;<br></div><br><br><div style=3D"font-size:14px;font-fami=
+ly:&#39;Trebuchet MS&#39;,Trebuchet,&#39;Lucida Grande&#39;,&#39;Lucida San=
+s Unicode&#39;,&#39;Lucida Sans&#39;,Tahoma,sans-serif!important"><p>Dear M=
+illburn Families,</p>
+<p>I hope you are doing well and that everyone is enjoying their summer!</p=
+>
+<p>This is just a friendly reminder that=C2=A0<strong>The Goddard School of=
+ Millburn will be closed for Professional Development Days on Thursday, Aug=
+ust 27, 2026, and Friday, August 28, 2026</strong>.</p>
+<p>This was notated on our Summer calendars we sent out earlier in June. We=
+ wanted to provide another reminder well in advance so you have plenty of t=
+ime to plan accordingly and mark these dates on your calendar. As the dates=
+ get closer, we will send another reminder.</p>
+<p>Thank you for your understanding and continued support. We look forward =
+to seeing everyone back after the closure!</p>
+<p>Best,</p>
+<p>Alexa</p></div><br><br><p>=C2=A0</p>
+<p><img alt=3D"" size=3D"957306" height=3D"33" width=3D"34" style=3D"color:=
+inherit;font:inherit;border:0px;margin:0px;padding:0px;vertical-align:basel=
+ine;width:34px;height:33px;min-height:auto;min-width:auto"></p>
+<p>The Goddard School of Millburn<br>
+National Rookie of the Year | Circle of Excellence Awardee</p>
+<p>Instagram:=C2=A0<a href=3D"https://u6663819.ct.sendgrid.net/ls/click?upn=
+=3Du001.oCNILiHHB85Kh2ybGA2pn3eW1IO-2FnxkLuc4KM-2F0jjfeje8zThhSgR3qRK-2Bn6M=
+B8Ym6mumj07kLW7AI6oPznrDQ-3D-3DUUfW_7q2-2F1LWzHNsPsrpxpegg0jcUcv0oc2Dm-2Fmg=
+0-2FziiKdxKXyQPDafLjf5tLxulCGAzOKkVgegxEhqBBP2vBPF-2BilFBeoTgm5kPVhH0RfMert=
+305VF2ApD0u-2FvlMy4o3wiotQzpSPHrDzkdM1BofKK-2BNA36-2FD-2BALCh-2FOvf2m-2FIXz=
+uNmvk9dw9Jo09H-2F1crakbtMCYK00sKlvr17gZs4ZeeAdQ-3D-3D" target=3D"_blank">Th=
+e Goddard School of Millburn</a></p>
+<p>Facebook:=C2=A0<a href=3D"https://u6663819.ct.sendgrid.net/ls/click?upn=
+=3Du001.oCNILiHHB85Kh2ybGA2pnz-2FPJ-2FwJZyBiAROGKlXkoOlDfB3N5Yd1fU5KYvuEubL=
+Sp7r7a93uqRiGUFYqoFPctw-3D-3DB9hJ_7q2-2F1LWzHNsPsrpxpegg0jcUcv0oc2Dm-2Fmg0-=
+2FziiKdxKXyQPDafLjf5tLxulCGAzHJGjz8YjQytemVrJxELIIOq8qdzitp9zgIEjCce0jYoeQn=
+ze-2BehneifTEcy-2FxWbHDxbQkv8qQXBXuqz4jFrmS2XiHUAJlgLI07IzD-2F-2F-2Fx2zqwfY=
+Ckq2FANv6BWc7wfjsu-2F3kMNuzrLcndqm-2Bwejing-3D-3D" target=3D"_blank">The Go=
+ddard School of Millburn</a></p>
+<p>=C2=A0</p>
+<p>=C2=A0</p><img src=3D"https://u6663819.ct.sendgrid.net/wf/open?upn=3Du00=
+1.2-2Fh-2Bjl0Yi-2FJXJ4EduyCorHZnQ5cVMZhLVg36QFgleJ4BOjPpIfSZK272KANYanOzAL5=
+IWe70oCLz08KIJPEpFM7MwLehsM3Gr6RlYCCsA0Bpg-2FP2LV3ThgE4S9GwTRe5ZZiy5zBNLTz3=
+IF0G7kFhggWtqFAoTlqZxNW-2BR6aScv8Ft9SnczKxMsmihKBIO17Xl5TkB1AQ1te6CLVBETpUX=
+A-3D-3D" alt=3D"" width=3D"1" height=3D"1" border=3D"0" style=3D"height:1px=
+!important;width:1px!important;border-width:0!important;margin-top:0!import=
+ant;margin-bottom:0!important;margin-right:0!important;margin-left:0!import=
+ant;padding-top:0!important;padding-bottom:0!important;padding-right:0!impo=
+rtant;padding-left:0!important">
+</div></div>
+
+--000000000000e8c937065a094d8b--

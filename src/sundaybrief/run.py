@@ -1,8 +1,9 @@
 """Entry point. Run weekly by launchd, or by hand with --dry-run.
 
-    python -m sundaybrief.run --dry-run          # print to console, send nothing
-    python -m sundaybrief.run                     # build and push for real
-    python -m sundaybrief.run --days 14           # two-week window
+    python -m sundaybrief.run --dry-run                       # print, send nothing
+    python -m sundaybrief.run                                  # build and push for real
+    python -m sundaybrief.run --days 14                        # two-week window
+    python -m sundaybrief.run --start 2026-08-03 --end 2026-08-09 --dry-run   # specific range
 """
 from __future__ import annotations
 
@@ -25,11 +26,35 @@ from .summarize import build_narrative, build_templated
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
-def week_window(days: int) -> tuple[datetime, datetime]:
-    """From local midnight today, spanning `days` forward."""
-    now = datetime.now(LOCAL_TZ)
-    start = now.replace(hour=0, minute=0, second=0, microsecond=0)
-    return start, start + timedelta(days=days)
+def _parse_date(s: str) -> datetime:
+    try:
+        d = datetime.strptime(s, "%Y-%m-%d")
+    except ValueError:
+        raise SystemExit(f"error: bad date {s!r} — use YYYY-MM-DD")
+    return d.replace(tzinfo=LOCAL_TZ)
+
+
+def resolve_window(args, config: dict) -> tuple[datetime, datetime]:
+    """Figure out the [start, end) window from flags, falling back to config.
+
+    --start DATE   window start (default: today, local midnight)
+    --end DATE     inclusive end day; overrides --days
+    --days N       length from start when --end is not given
+    """
+    if args.start:
+        start = _parse_date(args.start)
+    else:
+        start = datetime.now(LOCAL_TZ).replace(hour=0, minute=0, second=0, microsecond=0)
+
+    if args.end:
+        end = _parse_date(args.end) + timedelta(days=1)   # include the whole end day
+    else:
+        days = args.days or config["window_days"]
+        end = start + timedelta(days=days)
+
+    if end <= start:
+        raise SystemExit(f"error: end ({end:%Y-%m-%d}) must be after start ({start:%Y-%m-%d})")
+    return start, end
 
 
 def gather(config: dict, start: datetime, end: datetime) -> list[dict]:
@@ -53,6 +78,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--config", default=str(REPO_ROOT / "config" / "sources.yaml"))
     parser.add_argument("--env", default=str(REPO_ROOT / ".env"))
     parser.add_argument("--days", type=int, default=None, help="window length (default: from config)")
+    parser.add_argument("--start", metavar="YYYY-MM-DD", help="window start date (default: today)")
+    parser.add_argument("--end", metavar="YYYY-MM-DD",
+                        help="inclusive window end date (overrides --days)")
     parser.add_argument("--dry-run", action="store_true", help="print the brief; don't send")
     parser.add_argument("--show-events", action="store_true",
                         help="print every ingested event (great for a first test)")
@@ -66,9 +94,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"config error: {exc}", file=sys.stderr)
         return 2
 
-    days = args.days or config["window_days"]
-    start, end = week_window(days)
-    print(f"Window: {start:%a %b %-d} → {end:%a %b %-d} ({days} days)", file=sys.stderr)
+    start, end = resolve_window(args, config)
+    span = (end - start).days
+    print(f"Window: {start:%a %b %-d %Y} → {end:%a %b %-d %Y} ({span} days)", file=sys.stderr)
 
     events = dedupe(gather(config, start, end))
     print(f"Total after dedupe: {len(events)} events", file=sys.stderr)

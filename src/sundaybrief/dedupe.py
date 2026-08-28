@@ -1,21 +1,32 @@
-"""Collapse the same real-world event appearing across multiple local feeds."""
+"""Collapse the same real-world event appearing across multiple feeds.
+
+Dedupe only merges events that share a title and day AND come from *different*
+sources. Two entries in the same calendar are never merged — your own calendar
+is authoritative, so same-title repeats there (two appointments at different
+times, an all-day banner plus a timed entry) are real and kept. Merging is
+reserved for the case it was built for: one town event showing up across several
+local feeds at once.
+"""
 from __future__ import annotations
 
 from .models import Event
 
 
 def dedupe(events: list[Event]) -> list[Event]:
-    seen: dict[str, Event] = {}
-    for e in events:
-        key = e.dedupe_key()
-        if key in seen:
-            # Keep the first, but remember every feed it showed up in.
-            for s in e.sources:
-                if s not in seen[key].sources:
-                    seen[key].sources.append(s)
-            # Prefer a version that carries a URL if the kept one lacks it.
-            if not seen[key].url and e.url:
-                seen[key].url = e.url
+    kept: list[Event] = []
+    index: dict[tuple, list[Event]] = {}
+    for e in sorted(events, key=lambda ev: (ev.start, ev.title.lower())):
+        key = (e.title.strip().lower(), e.day)
+        match = None
+        for other in index.get(key, []):
+            if e.source not in other.sources:   # same title+day, but a different feed
+                match = other
+                break
+        if match is not None:
+            match.sources.append(e.source)
+            if not match.url and e.url:
+                match.url = e.url
         else:
-            seen[key] = e
-    return sorted(seen.values(), key=lambda e: (e.start, e.title.lower()))
+            kept.append(e)
+            index.setdefault(key, []).append(e)
+    return sorted(kept, key=lambda ev: (ev.start, ev.title.lower()))
