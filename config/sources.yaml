@@ -7,6 +7,9 @@ window_days: 7
 summary:
   style: templated          # switch to `narrative` once the basics work
   model: claude-sonnet-5
+  names:                    # used by narrative mode to write in 3rd person
+    me: Justin
+    spouse: Maria
 
 sources:
   # ---- You (start here) -------------------------------------------------

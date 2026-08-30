@@ -6,6 +6,7 @@ computed on read (latest source_date per school+date wins).
 from __future__ import annotations
 
 import json
+import urllib.parse
 import uuid
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
@@ -131,3 +132,20 @@ def effective_notes(rows: list[dict], start: date, end: date) -> list[dict]:
                 and start.isoformat() <= d <= end.isoformat()):
             out.append(row)
     return sorted(out, key=lambda r: (r["date"], r["school"]))
+
+
+def source_link(row: dict) -> str:
+    """Best-effort clickable link back to a row's source document.
+
+    A web-sourced row's `source_message_id` is a content hash (see
+    reader.read_web_page) rather than a real Message-ID, so `source_from` —
+    the page URL itself — is the link. An email-sourced row has no direct URL,
+    so this falls back to a Gmail search deep-link on the exact Message-ID.
+    """
+    mid = row.get("source_message_id") or ""
+    if mid.startswith("web-"):
+        return row.get("source_from", "")
+    mid = mid.strip().strip("<>")
+    if not mid:
+        return ""
+    return "https://mail.google.com/mail/u/0/#search/rfc822msgid%3A" + urllib.parse.quote(mid, safe="")

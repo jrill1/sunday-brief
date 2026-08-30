@@ -61,5 +61,6 @@ def load_config(path: str | Path) -> dict:
     summary.setdefault("style", "templated")     # templated | narrative
     summary.setdefault("model", "claude-sonnet-5")
     summary.setdefault("full_brief_url", "")
+    summary.setdefault("names", {})              # {"me": "...", "spouse": "..."}, narrative-only
 
     return {"sources": resolved, "summary": summary, "window_days": cfg.get("window_days", 7)}
