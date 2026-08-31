@@ -140,7 +140,14 @@ def source_link(row: dict) -> str:
     A web-sourced row's `source_message_id` is a content hash (see
     reader.read_web_page) rather than a real Message-ID, so `source_from` —
     the page URL itself — is the link. An email-sourced row has no direct URL,
-    so this falls back to a Gmail search deep-link on the exact Message-ID.
+    so this instead points at the "Sunday Brief Opener" companion Android app
+    (see android-opener/) via its own sundaybrief:// scheme: tapping it copies
+    a Gmail search for the exact Message-ID to the clipboard and opens Gmail,
+    since Gmail's Android app has no reliable way to be deep-linked straight
+    to a search result (mail.google.com's #search/ fragment is silently
+    ignored by Gmail's mobile web fallback, and Gmail's own internal deep-link
+    mechanisms proved unreliable — see project notes). This is mobile-only:
+    on a device without the opener app installed, the link does nothing.
     """
     mid = row.get("source_message_id") or ""
     if mid.startswith("web-"):
@@ -148,4 +155,5 @@ def source_link(row: dict) -> str:
     mid = mid.strip().strip("<>")
     if not mid:
         return ""
-    return "https://mail.google.com/mail/u/0/#search/rfc822msgid%3A" + urllib.parse.quote(mid, safe="")
+    query = "rfc822msgid:" + mid
+    return "sundaybrief://open?q=" + urllib.parse.quote(query, safe="")

@@ -133,24 +133,88 @@ def _brief_facts(sig: WeekSignals, names: dict | None = None) -> str:
 _LINKS_DELIM = "---LINKS---"
 
 
-def _parse_narrative_response(raw: str) -> tuple[str, str | None] | None:
+def _provenance(url: str) -> str:
+    """Generic fallback source tag for a citation url, for the links message.
+    Calendar links get a more specific tag from _gcal_provenance when possible
+    (who owns the calendar it's on) — this is only the fallback for urls that
+    function doesn't recognize (e.g. a local-pick page url)."""
+    if url.startswith("sundaybrief://"):
+        return "Gmail"
+    if "calendar.google.com" in url:
+        return "Gcal"
+    return ""
+
+
+def _gcal_provenance(sig: WeekSignals, names: dict) -> dict[str, str]:
+    """Map each parent-calendar event's url to a specific provenance tag.
+
+    Unlike a forwarded school email (visible to both parents once it hits the
+    shared drop-box), a calendar event is only visible to whoever's calendar
+    it's actually on. dedupe.py merges an event across sources when the same
+    title+day shows up on more than one feed — so an event whose `.sources`
+    spans both "My ..." and "Spouse ..." feeds is a shared invite both parents
+    can open ("Gcal"); one that only ever showed up on a single parent's own
+    feed gets that parent's name (and "work" if it's a work-calendar event),
+    since the other parent likely can't click into it at all.
+
+    Relies on sources.yaml's current "My ..." / "Spouse ..." naming
+    convention for calendar sources — update this if those names change.
+    """
+    mapping: dict[str, str] = {}
+    for e in sig.parent_events:
+        if not e.url:
+            continue
+        persons = set()
+        for src in e.sources:
+            if src.startswith("Spouse"):
+                persons.add("spouse")
+            elif src.startswith("My "):
+                persons.add("me")
+        if len(persons) >= 2:
+            mapping[e.url] = "Gcal"
+        else:
+            name = names.get(e.person, e.person) or "?"
+            mapping[e.url] = f"{name} work Gcal" if e.category == "work" else f"{name} Gcal"
+    return mapping
+
+
+def _parse_narrative_response(
+    raw: str, gcal_labels: dict[str, str] | None = None,
+) -> tuple[str, str | None] | None:
     """Split the model's citation-style response into (prose, links_message).
 
     Expects prose using [1]/[2]/... markers, then a "---LINKS---" line, then
-    one "[n] url" per line. A missing/empty links section just means no
-    citations that week — not a failure, so it returns (prose, None). Only a
-    missing/empty prose half is treated as a real failure (None), so the
+    one "[n] label | url" per line. A missing/empty links section just means
+    no citations that week — not a failure, so it returns (prose, None). Only
+    a missing/empty prose half is treated as a real failure (None), so the
     caller falls back to templated rather than sending something broken.
+
+    The model sometimes cites a number in the prose but drops it from its own
+    links list — any prose marker with no matching link entry gets stripped
+    out, so the sent message never has a dangling "[4]" pointing at nothing.
+
+    The provenance tag ("Gmail"/"Gcal") is derived from the url ourselves
+    rather than asked of the model, so it's always correct even if the model
+    mislabels or omits it.
     """
     prose, _, rest = raw.partition(_LINKS_DELIM)
     prose = prose.strip()
     if not prose:
         return None
-    pairs = re.findall(r"\[(\d+)\]\s*(\S+)", rest)
-    if not pairs:
+    triples = re.findall(r"\[(\d+)\]\s*(.+?)\s*\|\s*(\S+)", rest)
+    have = {n for n, _, _ in triples}
+    prose = re.sub(r"\[(\d+)\]", lambda m: m.group(0) if m.group(1) in have else "", prose)
+    prose = re.sub(r"\s+([.,;:])", r"\1", prose)
+    prose = re.sub(r"[ \t]{2,}", " ", prose).strip()
+    if not triples:
         return prose, None
-    links = "\n".join(f'[{n}] <a href="{html.escape(url)}">link</a>' for n, url in pairs)
-    return prose, links
+    gcal_labels = gcal_labels or {}
+    lines = []
+    for n, label, url in triples:
+        tag = gcal_labels.get(url) or _provenance(url)
+        text = f"{label} ({tag})" if tag else label
+        lines.append(f'[{n}] <a href="{html.escape(url)}">{html.escape(text)}</a>')
+    return prose, "\n".join(lines)
 
 
 def build_narrative(
@@ -199,17 +263,23 @@ def build_narrative(
         "in your sentence, like \"...closed for the week [1]...\", numbered in "
         "the order they first appear. Never cite a fact with no (LINK: url), "
         "and never invent a url. Then, after your prose, on their own lines, "
-        "list every number you used:\n"
+        "list every number you used with a short (2-5 word) label for what "
+        "it links to — no trailing punctuation — then the url, separated by "
+        "\" | \":\n"
         f"{_LINKS_DELIM}\n"
-        "[1] <the url for citation 1>\n"
-        "[2] <the url for citation 2>\n"
+        "[1] <short label> | <the url for citation 1>\n"
+        "[2] <short label> | <the url for citation 2>\n"
         "(etc. — omit this whole section if you didn't cite anything)\n\n"
         "HARD LIMIT for the prose part: under 850 characters, no exceptions "
         "(the links list after the delimiter doesn't count against this). "
         "Plain prose only — NO markdown, NO headers, NO bullet points, NO "
         "bold/asterisks, NO emoji. 3-5 short sentences, like a text message. "
         "Cite at most 5 facts total — pick the ones worth following up on, "
-        "not every fact that happens to have a link.\n\n"
+        "not every fact that happens to have a link. Put a blank line (two "
+        "newlines) between each of the numbered topics below when more than "
+        "one applies — closures/coverage-conflict, school milestones, and "
+        "personal highlights each get their own short paragraph rather than "
+        "running together in one block.\n\n"
         "You are summarizing the two or three things that actually matter — "
         "you are NOT reproducing the digest day by day. Most days won't get a "
         "mention at all. Cover, in order of importance, only what applies:\n"
@@ -235,13 +305,14 @@ def build_narrative(
         resp = client.messages.create(
             model=model,
             max_tokens=2000,
+            thinking={"type": "disabled"},
             messages=[{"role": "user", "content": prompt}],
         )
         raw = "".join(block.text for block in resp.content if block.type == "text").strip()
     except Exception:
         return None
 
-    parsed = _parse_narrative_response(raw)
+    parsed = _parse_narrative_response(raw, gcal_labels=_gcal_provenance(sig, names))
     if parsed is None:
         return None
     message, links_message = parsed
