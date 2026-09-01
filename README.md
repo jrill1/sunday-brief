@@ -104,14 +104,22 @@ In `config/sources.yaml`:
 
 ## Scheduling (launchd)
 
-`./scripts/install-launchd.sh` generates the plist with the correct paths for
-wherever the repo lives and loads it (Sundays at 6am). It runs as a LaunchAgent
-under your logged-in user — the right choice for an auto-login Mini, and required
-if you use the Keychain option.
+Two independent jobs, both LaunchAgents under your logged-in user — the right
+choice for an auto-login Mini, and required if you use the Keychain option:
+
+- `./scripts/install-launchd.sh` — the weekly brief itself (Sundays at 6am).
+- `./scripts/install-launchd-ledger.sh` — pulls new forwarded school emails
+  from the drop-box daily (5am) and appends any closures/notes to
+  `data/closures.jsonl`, so the ledger is always fresh by the time Sunday's
+  brief runs. Safe to run as often as you like — only ever processes a given
+  Message-ID once (`data/processed.json`).
 
 ```bash
-launchctl start com.sunday.brief    # run once now to test
+launchctl start com.sunday.brief           # run the weekly brief once now to test
 tail -f brief.log
+
+launchctl start com.sunday.brief.ledger    # run the ledger job once now to test
+tail -f ledger.log
 ```
 
 ## Secrets: .env vs Keychain
