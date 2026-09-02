@@ -98,20 +98,22 @@ def _brief_facts(sig: WeekSignals, names: dict | None = None) -> str:
     names = names or {}
     by_day: dict = {}
 
-    def add(d, text, url):
+    def add(d, text, url, context=""):
+        if context:
+            text += f" (CONTEXT: {context})"
         if url:
             text += f" (LINK: {url})"
         by_day.setdefault(d, []).append(text)
 
     for e in sig.closures:
         for d in days_covered(e):
-            add(d, f"CLOSURE: {e.title}", e.url)
+            add(d, f"CLOSURE: {e.title}", e.url, e.context)
     for e in sig.half_days:
         for d in days_covered(e):
-            add(d, f"HALF-DAY: {e.title}", e.url)
+            add(d, f"HALF-DAY: {e.title}", e.url, e.context)
     for e in sig.notes:
         for d in days_covered(e):
-            add(d, f"NOTE: {e.title}", e.url)
+            add(d, f"NOTE: {e.title}", e.url, e.context)
     for e in sig.parent_events:
         who = names.get(e.person, e.person) or e.category
         add(e.day, f"{e.timelabel()} [{who}] {e.title}", e.url)
@@ -256,7 +258,11 @@ def build_narrative(
         "summarize: CLOSURE/HALF-DAY/NOTE facts from school sources, each "
         "parent's own calendar events tagged by name, and LOCAL OPTION facts "
         "for nearby events. Some facts carry a (LINK: url) — a link back to "
-        "that fact's source (the calendar event or the school email).\n\n"
+        "that fact's source (the calendar event or the school email). Some "
+        "also carry a (CONTEXT: ...) — extra detail the school's email itself "
+        "stated (a reschedule, unusual urgency or repetition). When present, "
+        "weave it naturally into the sentence rather than bolting it on — it's "
+        "often the most useful part of the fact.\n\n"
         "This message will be split into two separate text messages, so use "
         "footnote-style citations instead of inline links: when you mention a "
         "fact that has a (LINK: url), put a bracketed number right after it "

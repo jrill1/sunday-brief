@@ -41,6 +41,7 @@ class Event:
     url: str = ""
     person: str = ""     # which parent, for calendar categories
     child: str = ""      # which kid, for daycare categories
+    context: str = ""    # ledger-only: extra narrative detail beyond title, see closures/ledger.py
     sources: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:

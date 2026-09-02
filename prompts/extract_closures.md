@@ -6,7 +6,8 @@ Return ONLY a JSON array — no prose, no markdown, no code fences. Each element
 one fact, in exactly this shape:
 
   {"school":"<name>","type":"closure"|"partial_closure"|"note","active":1|0,
-   "start_date":"YYYY-MM-DD","end_date":"YYYY-MM-DD","reason":"<short label>"}
+   "start_date":"YYYY-MM-DD","end_date":"YYYY-MM-DD","reason":"<short label>",
+   "context":"<optional: extra detail worth passing along, or omit>"}
 
 If the email has no such facts, return exactly: []
 
@@ -41,6 +42,14 @@ Rules:
   "Winter Recess", "Faculty In-Service", "early dismissal"). For "note", a short
   actionable summary a parent could act on directly ("Bring a swimsuit for
   Wednesday's field trip", "$25 field trip fee due", "Flu vaccine form due").
+- context (optional): only when the email itself explicitly states something
+  beyond the short reason label that's worth passing along — the event was
+  rescheduled from an earlier date ("originally scheduled for Sept 10"), the
+  email signals unusual urgency or repetition ("this is our third reminder",
+  "this is a hard deadline"), or similar. One short sentence, plain text.
+  Omit entirely (or leave "") when there's nothing beyond the reason — most
+  facts won't have this. Never infer or invent urgency/history the email
+  doesn't actually state; if in doubt, leave it out.
 - SCOPE — extract:
     * Full closures, partial closures, and cancellations of those. A "closed"
       day counts even if the reason is a conference or in-service.

@@ -5,7 +5,9 @@ computed on read (latest source_date per school+date wins).
 """
 from __future__ import annotations
 
+import difflib
 import json
+import re
 import urllib.parse
 import uuid
 from datetime import date, datetime, timedelta, timezone
@@ -50,6 +52,7 @@ def expand_rows(item: dict, doc: EmailDoc, attachment: str | None, extractor_tag
             "type": item["type"],
             "active": int(item["active"]),
             "reason": item["reason"],
+            "context": item.get("context") or "",
             "title": _title(item["school"], item["type"], int(item["active"]), item["reason"]),
             "span_start": start.isoformat(),
             "span_end": end.isoformat(),
@@ -62,6 +65,41 @@ def expand_rows(item: dict, doc: EmailDoc, attachment: str | None, extractor_tag
             "extractor": extractor_tag,
         })
     return rows
+
+
+def _normalize(text: str) -> str:
+    """Collapse cosmetic wording differences (hyphens, dashes, case,
+    whitespace) so the same real-world fact worded slightly differently by
+    two separate emails compares as identical. A trailing parenthetical
+    ("(deadline moved up)", "(rain date TBD)") is stripped too — it's almost
+    always added context around an otherwise-identical fact, not part of its
+    core identity."""
+    text = re.sub(r"\s*\([^)]*\)\s*$", "", text)
+    text = text.lower().replace("-", " ").replace("—", " ")
+    return " ".join(text.split())
+
+
+def is_duplicate_row(candidate: dict, existing_rows: list[dict], threshold: float = 0.82) -> bool:
+    """True if `candidate` just restates a fact already present in
+    `existing_rows` — same school/date/type/active, with near-identical
+    reason text. Forwards or repeats of the same announcement each carry a
+    fresh Message-ID, so this catches what the Message-ID idempotency check
+    in run_extract.py can't.
+
+    `active` is part of the match key on purpose: a genuine status change
+    (e.g. a later cancellation) has a different `active` value and must
+    never be treated as a duplicate — this ledger is append-only, and a
+    cancellation is how a change gets recorded (see module docstring).
+    """
+    cand_norm = _normalize(candidate["reason"])
+    for r in existing_rows:
+        if (r["school"], r["date"], r["type"], r["active"]) != (
+            candidate["school"], candidate["date"], candidate["type"], candidate["active"],
+        ):
+            continue
+        if difflib.SequenceMatcher(None, cand_norm, _normalize(r["reason"])).ratio() >= threshold:
+            return True
+    return False
 
 
 def append_rows(rows: list[dict], ledger_path: str | Path) -> None:

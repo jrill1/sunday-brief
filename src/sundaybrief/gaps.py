@@ -120,7 +120,7 @@ def _ledger_event(row: dict) -> Event:
     return Event(
         title=row["title"], start=to_local(d), end=None, all_day=True,
         source="closures-ledger", category="daycare",
-        child=row.get("child", ""), url=source_link(row),
+        child=row.get("child", ""), url=source_link(row), context=row.get("context", ""),
     )
 
 
