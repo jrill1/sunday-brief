@@ -107,9 +107,9 @@ In `config/sources.yaml`:
 Two independent jobs, both LaunchAgents under your logged-in user — the right
 choice for an auto-login Mini, and required if you use the Keychain option:
 
-- `./scripts/install-launchd.sh` — the weekly brief itself (Sundays at 6am).
+- `./scripts/install-launchd.sh` — the weekly brief itself (Sundays at 9am).
 - `./scripts/install-launchd-ledger.sh` — pulls new forwarded school emails
-  from the drop-box daily (5am) and appends any closures/notes to
+  from the drop-box daily (8am) and appends any closures/notes to
   `data/closures.jsonl`, so the ledger is always fresh by the time Sunday's
   brief runs. Safe to run as often as you like — only ever processes a given
   Message-ID once (`data/processed.json`).
