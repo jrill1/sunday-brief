@@ -169,12 +169,20 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     token = get_secret("PUSHOVER_TOKEN")
-    user = get_secret("PUSHOVER_USER")
-    result = send_pushover(token, user, title, message, url=full_url)
-    print(f"Sent. Pushover status={result.get('status')}", file=sys.stderr)
-    if links_message:
-        links_result = send_pushover(token, user, f"{title} · links", links_message)
-        print(f"Sent follow-up links. Pushover status={links_result.get('status')}", file=sys.stderr)
+    # PUSHOVER_USER_SPOUSE is optional — the weekly brief goes to both parents
+    # once it's set, but only ever the weekly brief; ledger spotchecks
+    # (run_extract.py) are a separate, single-recipient stream by design.
+    recipients = [get_secret("PUSHOVER_USER")]
+    spouse_user = get_secret("PUSHOVER_USER_SPOUSE", required=False)
+    if spouse_user:
+        recipients.append(spouse_user)
+
+    for user in recipients:
+        result = send_pushover(token, user, title, message, url=full_url)
+        print(f"Sent. Pushover status={result.get('status')}", file=sys.stderr)
+        if links_message:
+            links_result = send_pushover(token, user, f"{title} · links", links_message)
+            print(f"Sent follow-up links. Pushover status={links_result.get('status')}", file=sys.stderr)
     return 0
 
 
