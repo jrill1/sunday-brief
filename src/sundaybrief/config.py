@@ -58,7 +58,7 @@ def load_config(path: str | Path) -> dict:
         })
 
     summary = cfg.get("summary", {})
-    summary.setdefault("style", "templated")     # templated | narrative
+    summary.setdefault("style", "narrative")     # templated | narrative
     summary.setdefault("model", "claude-sonnet-5")
     summary.setdefault("full_brief_url", "")
     summary.setdefault("names", {})              # {"me": "...", "spouse": "..."}, narrative-only

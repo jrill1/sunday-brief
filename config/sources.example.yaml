@@ -10,7 +10,7 @@
 window_days: 7
 
 summary:
-  style: templated          # templated | narrative
+  style: narrative          # templated | narrative
   model: claude-sonnet-5    # only used when style: narrative (any current model string)
   full_brief_url: ""        # optional: a page you host on the Mini; shown as "Full brief →"
 
