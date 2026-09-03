@@ -322,8 +322,14 @@ def ingest_worldwebs_events(source: dict, window_start: datetime, window_end: da
         except requests.RequestException:
             continue
         soup = BeautifulSoup(resp.text, "html.parser")
-        for row in soup.select(".cal-day-row"):
-            date_el = row.select_one(".event_date .eventfull_date")
+        # Each .cal-day-row is a whole WEEK, not a single day — its direct
+        # child <div>s are the actual per-day cells (confirmed by hand: a
+        # week-row's cells hold dates like 6, 7, 9, 12 side by side). Select
+        # those cells directly rather than the rows, since using a row's
+        # first date for every event in it was the bug that put "Weekly
+        # Maplewood Farmers Market" (really the 7th) on the 6th.
+        for cell in soup.select(".cal-day-row > div"):
+            date_el = cell.select_one(".event_date .eventfull_date")
             if not date_el or not date_el.get_text(strip=True).isdigit():
                 continue
             day = int(date_el.get_text(strip=True))
@@ -331,7 +337,7 @@ def ingest_worldwebs_events(source: dict, window_start: datetime, window_end: da
                 day_date = datetime(year, month, day)
             except ValueError:
                 continue
-            for a in row.select('a[class*="event-name-"]'):
+            for a in cell.select('a[class*="event-name-"]'):
                 title = a.get_text(strip=True).lstrip("- ").strip()
                 if not title:
                     continue
