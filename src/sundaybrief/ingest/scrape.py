@@ -1,14 +1,17 @@
 """Non-iCal local sources: RSS feeds, WordPress "The Events Calendar" JSON,
 a LibNet/EventKeeper library-calendar JSON endpoint, a "Modern Events
-Calendar" WordPress plugin HTML scrape, and (stubbed) headless rendering.
+Calendar" WordPress plugin HTML scrape, a CitySpark community-events widget,
+and (stubbed) headless rendering.
 
 Order of preference — always try the cheapest that works:
-  1. iCal feed    -> use ingest.ical instead (best)
-  2. RSS          -> ingest_rss (coarse: uses publish date, good for newsletters)
-  3. wp-events    -> ingest_wp_events (The Events Calendar REST API, real dates)
-  4. libnet-events -> ingest_libnet_events (LibNet/EventKeeper's own JSON, no auth)
-  5. mec-events   -> ingest_mec_events (Modern Events Calendar, server-rendered HTML)
-  6. headless     -> render JS with Playwright (last resort; not implemented yet)
+  1. iCal feed      -> use ingest.ical instead (best)
+  2. RSS            -> ingest_rss (coarse: uses publish date, good for newsletters)
+  3. wp-events      -> ingest_wp_events (The Events Calendar REST API, real dates)
+  4. libnet-events   -> ingest_libnet_events (LibNet/EventKeeper's own JSON, no auth)
+  5. mec-events     -> ingest_mec_events (Modern Events Calendar, server-rendered HTML)
+  6. cityspark-events -> ingest_cityspark_events (CitySpark's embed script JSON)
+  7. headless       -> render JS with Playwright (last resort; not implemented, and
+                        doesn't help against active bot-blocking anyway — see below)
 """
 from __future__ import annotations
 
@@ -148,6 +151,76 @@ def ingest_libnet_events(source: dict, window_start: datetime, window_end: datet
     return events
 
 
+def ingest_cityspark_events(source: dict, window_start: datetime, window_end: datetime, timeout: int = 30) -> list[Event]:
+    """CitySpark community-events widget (Village Green's actual embed —
+    the old "Tockify" assumption in this file's docstring was wrong/stale;
+    it's CitySpark). The embed script itself is a JS variable assignment
+    (`var cSparkLocals = {...};`) with a real "Events" array inside — not a
+    documented REST API, but not auth-gated or JS-rendering-gated either.
+
+    A CitySpark portal often aggregates events from several *other*
+    organizations at once — this project's Village Green portal, for
+    instance, already pulls in South Orange's own town calendar, Seton Hall,
+    and Facebook events alongside its own. Check for overlap with
+    sources.yaml's other local entries; dedupe.py handles exact title+day
+    duplicates across sources on its own.
+
+    The script only returns roughly the next several days of events from
+    "now" (query params didn't change that in testing) — a window reaching
+    much further out may come back thin.
+
+    Point `url` at the portal's own embed script, found by loading the
+    portal page's HTML and locating its
+    <script src="https://portal.cityspark.com/PortalScripts/...">.
+    """
+    try:
+        resp = requests.get(
+            source["url"], timeout=timeout,
+            headers={"User-Agent": "sunday-brief/0.1 (personal calendar aggregator)"},
+        )
+        resp.raise_for_status()
+    except requests.RequestException:
+        return []
+
+    m = re.match(r"var cSparkLocals = ", resp.text)
+    if not m:
+        return []
+    try:
+        payload, _ = json.JSONDecoder().raw_decode(resp.text, m.end())
+    except ValueError:
+        return []
+
+    events: list[Event] = []
+    for item in payload.get("Events", []):
+        raw_start = (item.get("StartUTC") or "").replace("Z", "+00:00")
+        try:
+            start = to_local(datetime.fromisoformat(raw_start))
+        except ValueError:
+            continue
+        if not (window_start <= start <= window_end):
+            continue
+        end = None
+        raw_end = (item.get("EndUTC") or "").replace("Z", "+00:00")
+        if raw_end:
+            try:
+                end = to_local(datetime.fromisoformat(raw_end))
+            except ValueError:
+                pass
+        events.append(
+            Event(
+                title=(item.get("Name") or "(untitled)").strip(),
+                start=start,
+                end=end,
+                all_day=bool(item.get("AllDay")),
+                source=source["name"],
+                category=source["category"],
+                location=(item.get("Venue") or "").strip(),
+                url=item.get("PrimaryUrl", ""),
+            )
+        )
+    return events
+
+
 _MEC_TIME_RE = re.compile(r"(\d{1,2}):(\d{2})\s*(am|pm)", re.IGNORECASE)
 
 
@@ -220,10 +293,19 @@ def ingest_mec_events(source: dict, window_start: datetime, window_end: datetime
 
 
 def ingest_headless(source: dict, window_start: datetime, window_end: datetime, **_) -> list[Event]:
-    """TODO: render JS-only calendars (e.g. Village Green's Tockify embed) with
-    Playwright and scrape the DOM. Only reach for this once you've confirmed the
-    site exposes no iCal, RSS, or wp-events endpoint. Left unimplemented so a
-    misconfigured source fails loud rather than silently pretending to work.
+    """TODO: render JS-only calendars with Playwright (already a project
+    dependency as of the Village Green investigation) and scrape the DOM.
+    Only reach for this once you've confirmed the site exposes no iCal, RSS,
+    wp-events, or other structured endpoint a plain request can hit.
+
+    Important: this does NOT help against active bot-blocking (Akamai and
+    similar can detect headless Chrome itself, not just non-browser clients
+    — confirmed against maplewoodnj.gov's township calendar, which stayed
+    403 even from real headless Chromium on a real residential IP). This is
+    only useful for the "genuinely JS-only, not actively blocked" case.
+    Left unimplemented until there's a confirmed real target for it — Village
+    Green, this file's original motivating example, turned out not to need
+    it after all (see ingest_cityspark_events).
     """
     raise NotImplementedError(
         f"Headless scraping for {source['name']!r} isn't implemented yet. "
