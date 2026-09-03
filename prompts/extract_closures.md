@@ -62,7 +62,16 @@ Rules:
   EXCLUDE only: items with no specific date attached, and pure marketing/social
   filler with nothing to note even optionally — a "thank you for a great year"
   message, a generic newsletter, a photo gallery, "read about our program"
-  content. The line is "is there a date-bound thing worth knowing," not
+  content. Also EXCLUDE the recurring session itself for an ongoing
+  weekly-recurring class or activity (an enrichment class, sports program, or
+  lesson series meeting the same day every week across a multi-week season,
+  e.g. "Soccer Touch, Mondays, Sept 2-Dec 14") — that's not part of what this
+  ledger is for: a heads-up about things outside the family's normal weekly
+  routine, not the routine itself, and kids may not even be enrolled in every
+  one offered. Still extract any genuinely single-date fact tied to that same
+  class — its registration deadline, a one-time kickoff/start date, a specific
+  performance or showcase day — just never the recurring weekly span itself.
+  The line is "is there a date-bound thing worth knowing," not
   "is it mandatory" — a paid opt-in Saturday session has a real date and
   belongs; a congratulatory note does not. When unsure, prefer extracting a
   "note" over dropping it — the reader can ignore an irrelevant note, but a
