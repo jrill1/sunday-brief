@@ -1,20 +1,25 @@
-"""Monthly check: has any of Maplewood Village's annual signature-event
-pages changed since we last looked?
+"""Monthly check: has any local org's annual signature-event pages changed
+since we last looked?
 
-These 7 pages (Art Walk, Village Night Out, Dickens Village, etc.) each
-describe one big annual/seasonal village event, with its exact date usually
-buried in a paragraph of prose and filled in incrementally as the event
-approaches — e.g. Dickens Village (a December event) just says "happening
-again this December" months out, with no specific date, while Art Walk
-(happening next month) already has "Sunday, October 18, 2026, 11am-5pm"
-spelled out. There's no discoverable calendar feed here, just these 7 known
-pages, so this snapshots each page's visible text and flags whichever ones
-changed since the last run — useful even for a page we can't parse a date
-out of yet, since "this page's content just changed" is itself the signal
-worth a look.
+Some community orgs (Maplewood Village Alliance, Springfield Avenue
+Maplewood, so far) don't run a discoverable calendar feed — instead they
+have a fixed, known set of pages, each describing one big annual/seasonal
+event, with the exact date usually buried in a paragraph of prose and
+filled in incrementally as the event approaches. E.g. Dickens Village (a
+December event) just says "happening again this December" months out, with
+no specific date, while Art Walk (happening next month) already has
+"Sunday, October 18, 2026, 11am-5pm" spelled out — and Springfield Avenue's
+"Dec 13 Avenue-Wide Sale" page mentions a date with no year at all, so it's
+genuinely ambiguous which year it's for.
 
-    python scripts/check_village_events.py
-    python scripts/check_village_events.py --quiet   # only print if something changed
+Rather than a real weekly ingester (too sparse/low-value to check every
+week, the way a real calendar's contents are), this snapshots each page's
+visible text and flags whichever changed since the last run — useful even
+for a page with no parseable date yet, since "this page's content just
+changed" is itself the signal worth a look.
+
+    python scripts/check_annual_events.py
+    python scripts/check_annual_events.py --quiet   # only print if something changed
 """
 from __future__ import annotations
 
@@ -30,9 +35,10 @@ import requests
 from bs4 import BeautifulSoup
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-SNAPSHOT_PATH = REPO_ROOT / "data" / "village_events_snapshot.json"
+SNAPSHOT_PATH = REPO_ROOT / "data" / "annual_events_snapshot.json"
 
 PAGES = [
+    # ---- Maplewood Village Alliance ----
     ("Art Walk and Music Fest", "https://maplewoodvillagenj.com/art-walk"),
     ("Village Night Out", "https://maplewoodvillagenj.com/village-night-out"),
     ("Celebrating Our Black-Owned Businesses",
@@ -43,6 +49,16 @@ PAGES = [
     ("Dickens Village", "https://maplewoodvillagenj.com/dickens-village"),
     ("Maplewood Small Wonder Marketplace",
      "https://maplewoodvillagenj.com/maplewood-small-wonder-marketplace"),
+    # ---- Springfield Avenue Maplewood ----
+    ("Black History Month", "https://www.springfieldavenue.com/black-history-month"),
+    ("MayFest", "https://www.springfieldavenue.com/mayfest"),
+    ("Art on Tap Fundraiser", "https://www.springfieldavenue.com/craft-beer-tasting"),
+    ("Summer Concerts at the Gazebo",
+     "https://www.springfieldavenue.com/summer-concerts-at-the-gazebo"),
+    ("Springfield Ave Holiday Celebration", "https://www.springfieldavenue.com/holiday-celebration"),
+    ("Sunday Jazz Series", "https://www.springfieldavenue.com/sunday-jazz-series"),
+    ("Scarecrow Spectacular", "https://www.springfieldavenue.com/scarecrow-spectacular"),
+    ("Avenue-Wide Sale Day", "https://www.springfieldavenue.com/2025-shop-local"),
 ]
 
 _DATE_RE = re.compile(
