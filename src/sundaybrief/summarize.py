@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import html
 import re
+import sys
 from datetime import date, timedelta
 
 from dateutil.relativedelta import relativedelta
@@ -353,13 +354,15 @@ def build_narrative(
             messages=[{"role": "user", "content": prompt}],
         )
         raw = "".join(block.text for block in resp.content if block.type == "text").strip()
-    except Exception:
+    except Exception as exc:
+        print(f"build_narrative: LLM call failed, falling back to templated: {exc}", file=sys.stderr)
         return None
 
     parsed = _parse_narrative_response(raw, gcal_labels=_gcal_provenance(sig, names))
     if parsed is None:
         return None
     message, links_message = parsed
+    message = f"Hi, it's Sunday!\n\n{message}"
     if len(message) > PUSHOVER_LIMIT:
         return None
     if links_message and len(links_message) > PUSHOVER_LIMIT:
@@ -378,16 +381,20 @@ _LOCATION_SOURCES = {"Millburn Library", "Maplewood Library", "Pallet Brewing"}
 
 def build_weekend_picks(
     sig: WeekSignals, model: str, api_key: str, children: list[dict] | None = None,
-) -> str | None:
+) -> tuple[str, str] | None:
     """Ask Claude to pick up to 8 genuinely kid-friendly events from this
     week's weekend/closure-day local candidates (sig.picks — already scoped
-    to focus days by gaps.analyze()), for a third "Weekend/extracurricular
-    picks" Pushover push. Returns a single message (within PUSHOVER_LIMIT —
-    trimmed to fit rather than split across multiple pushes, dropping the
-    model's lowest-priority picks first if not everything fits), or None if
-    there's nothing to send (no candidates, none qualify, or the call fails).
-    Display order is chronological regardless of the model's own "best
-    first" preference order, which is only used to decide what to keep.
+    to focus days by gaps.analyze()), for a third Pushover push. Returns
+    (message, subject_label), or None if there's nothing to send (no
+    candidates, none qualify, or the call fails). `message` is a single
+    string within PUSHOVER_LIMIT — trimmed to fit rather than split across
+    multiple pushes, dropping the model's lowest-priority picks first if not
+    everything fits. Display order is chronological regardless of the
+    model's own "best first" preference order, which is only used to decide
+    what to keep. `subject_label` is "Weekend Picks" when every surviving
+    pick falls on a Saturday or Sunday, or "Weekend/extracurricular picks"
+    when a non-weekend focus day (e.g. a Monday daycare closure) contributed
+    at least one — so the subject line reflects what's actually inside.
 
     The model only ever SELECTS by number from the candidate list — it never
     rewrites a title or invents a link. All display text (day, time, title,
@@ -469,19 +476,26 @@ def build_weekend_picks(
             messages=[{"role": "user", "content": prompt}],
         )
         raw = "".join(block.text for block in resp.content if block.type == "text").strip()
-    except Exception:
+    except Exception as exc:
+        print(f"build_weekend_picks: LLM call failed, sending no picks: {exc}", file=sys.stderr)
         return None
 
     by_num = dict(numbered)
     picked = []
     for line in raw.splitlines():
-        # Usually just a bare number, but the model sometimes adds its own
-        # "1. 4" rank prefix despite being told not to — take the LAST
-        # number on the line either way, which handles both correctly.
-        nums = re.findall(r"\d+", line)
-        if not nums:
+        # Usually just a bare number ("4"). Sometimes the model adds its own
+        # "1. 4" rank prefix despite being told not to. And sometimes it
+        # echoes back the whole candidate line instead of just its number
+        # ("6. Mon Sep 7 all day — Broadway in the Park! @ ...") — which
+        # contains OTHER digits (dates, times) after the real one, so take
+        # the FIRST number here, not the last. That first number is only
+        # ever the rank rather than the real pick in the "1. 4" case, which
+        # is the one case where a second leading number immediately follows
+        # it — so only then do we take the second instead.
+        m = re.match(r"\s*(\d+)(?:[.\s]+(\d+)\b)?", line)
+        if not m:
             continue
-        n = int(nums[-1])
+        n = int(m.group(2) or m.group(1))
         if n in by_num and by_num[n] not in picked:
             picked.append(by_num[n])
     picked = picked[:_MAX_PICKS]
@@ -515,4 +529,7 @@ def build_weekend_picks(
 
     fits.sort(key=lambda e: e.start)
     message = "\n".join(_format(e) for e in fits)
-    return message or None
+    if not message:
+        return None
+    label = "Weekend Picks" if all(e.start.weekday() >= 5 for e in fits) else "Weekend/extracurricular picks"
+    return message, label

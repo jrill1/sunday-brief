@@ -153,9 +153,10 @@ def main(argv: list[str] | None = None) -> int:
 
     # Weekend/extracurricular picks are independent of style (needs an LLM
     # call either way, to judge which local candidates are kid-appropriate).
-    weekend_picks = build_weekend_picks(
+    picks_result = build_weekend_picks(
         signals, config["summary"]["model"], api_key, children=config["summary"]["children"],
     ) if api_key else None
+    weekend_picks, picks_label = picks_result if picks_result else (None, None)
 
     full_url = config["summary"].get("full_brief_url", "")
 
@@ -175,7 +176,7 @@ def main(argv: list[str] | None = None) -> int:
             print(f"\n[dry run] {len(links_message)} chars — would POST as a follow-up")
         if weekend_picks:
             print("\n" + "=" * 48)
-            print(f"{title} · Weekend/extracurricular picks")
+            print(f"{title} · {picks_label}")
             print("-" * 48)
             print(weekend_picks)
             print("=" * 48)
@@ -198,8 +199,8 @@ def main(argv: list[str] | None = None) -> int:
             links_result = send_pushover(token, user, f"{title} · links", links_message)
             print(f"Sent follow-up links. Pushover status={links_result.get('status')}", file=sys.stderr)
         if weekend_picks:
-            picks_result = send_pushover(token, user, f"{title} · Weekend/extracurricular picks", weekend_picks)
-            print(f"Sent weekend picks. Pushover status={picks_result.get('status')}", file=sys.stderr)
+            send_result = send_pushover(token, user, f"{title} · {picks_label}", weekend_picks)
+            print(f"Sent weekend picks. Pushover status={send_result.get('status')}", file=sys.stderr)
     return 0
 
 

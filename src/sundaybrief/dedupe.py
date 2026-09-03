@@ -24,6 +24,7 @@ asks an LLM instead, batched one call per day rather than per pair.
 from __future__ import annotations
 
 import re
+import sys
 
 from .models import Event
 
@@ -106,7 +107,8 @@ def _llm_dedupe_local(events: list[Event], model: str, api_key: str) -> list[Eve
                 messages=[{"role": "user", "content": prompt}],
             )
             raw = "".join(b.text for b in resp.content if b.type == "text").strip()
-        except Exception:
+        except Exception as exc:
+            print(f"_llm_dedupe_local: LLM call failed for one day's batch, skipping: {exc}", file=sys.stderr)
             continue
 
         by_num = dict(numbered)
