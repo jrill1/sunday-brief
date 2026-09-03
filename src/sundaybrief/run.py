@@ -117,7 +117,8 @@ def main(argv: list[str] | None = None) -> int:
     span = (end - start).days
     print(f"Window: {start:%a %b %-d %Y} → {end:%a %b %-d %Y} ({span} days)", file=sys.stderr)
 
-    events = dedupe(gather(config, start, end))
+    api_key = get_secret("ANTHROPIC_API_KEY", required=False)
+    events = dedupe(gather(config, start, end), model=config["summary"]["model"], api_key=api_key)
     print(f"Total after dedupe: {len(events)} events", file=sys.stderr)
 
     if args.show_events:
@@ -137,7 +138,6 @@ def main(argv: list[str] | None = None) -> int:
     style = args.style or config["summary"]["style"]
     title, message = build_templated(signals)
     links_message = None
-    api_key = get_secret("ANTHROPIC_API_KEY", required=False)
     if style == "narrative":
         if api_key:
             narrative = build_narrative(
