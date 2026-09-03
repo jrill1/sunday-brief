@@ -83,7 +83,7 @@ def _scan_calendar_closures(
     """Find closure/half-day mentions in the calendar itself, exploded to one
     Event per day within the window.
 
-    A multi-day all-day event (e.g. a hand-typed "ChildA school closed"
+    A multi-day all-day event (e.g. a hand-typed "kid1 school closed"
     banner spanning a week) is broken into individual day-atoms clipped to the
     window: a brief for Aug 29-Sep 5 only needs to know Monday the 31st is
     closed, not that the underlying calendar entry actually started Aug 24.
@@ -93,7 +93,7 @@ def _scan_calendar_closures(
     A daycare-category event (a synced daycare feed) is matched directly, same
     as always. Any other category is matched only if the title also names a
     known kid — this is what catches a closure hand-typed onto a personal/work
-    calendar (e.g. "ChildB school closed") that would otherwise never be
+    calendar (e.g. "kid2 school closed") that would otherwise never be
     flagged, since only daycare-category sources carry a `child` tag.
     """
     closures, half_days = [], []

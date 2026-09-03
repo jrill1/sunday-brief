@@ -23,7 +23,7 @@ PUSHOVER_LIMIT = 1024
 
 
 def _child_ages_phrase(children: list[dict] | None) -> str:
-    """"ChildA (4y) and ChildB (1y 7mo)" — computed fresh from each
+    """"Max (4y) and Priya (1y 7mo)" — computed fresh from each
     child's age-in-months as of a reference date (config's `summary.children`:
     [{"name","age_months","as_of"}]), rather than a hardcoded age string, so
     it never needs manual updating and can't silently drift out of date —

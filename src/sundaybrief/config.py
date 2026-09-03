@@ -6,6 +6,7 @@ the repo.
 """
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import yaml
@@ -65,6 +66,12 @@ def load_config(path: str | Path) -> dict:
     summary.setdefault("model", "claude-sonnet-5")
     summary.setdefault("full_brief_url", "")
     summary.setdefault("names", {})              # {"me": "...", "spouse": "..."}, narrative-only
-    summary.setdefault("children", [])           # [{"name","age_months","as_of"}], see summarize._child_ages_phrase
+    if "children" not in summary:
+        # Kids' names/ages are personal in a way a URL isn't, so — unlike
+        # everything else in this file — there's no `children:` key to set
+        # here at all; it only ever comes from .env's CHILDREN_JSON, same
+        # shape as the old inline list: [{"name","age_months","as_of"}].
+        children_json = get_secret("CHILDREN_JSON", required=False)
+        summary["children"] = json.loads(children_json) if children_json else []
 
     return {"sources": resolved, "summary": summary, "window_days": cfg.get("window_days", 7)}

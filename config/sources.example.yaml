@@ -1,5 +1,9 @@
 # Copy this to config/sources.yaml and fill in the real values.
-# config/sources.yaml is git-ignored so your secret URLs never get committed.
+# Unlike .env, config/sources.yaml is NOT git-ignored — it's meant to be
+# committed (so it travels with the repo to the Mini). That's fine for
+# source names/types/categories, but keep anything actually private
+# (secret URLs, kids' names/ages) out of it and in .env instead — see the
+# `secret:` field below for URLs, and .env.example's CHILDREN_JSON for kids.
 #
 # Each source needs:  name, type, category, and either `url:` or `secret:`
 #   type:     ical | rss | wp-events | headless
@@ -40,22 +44,27 @@ sources:
     secret: ICAL_SPOUSE_PERSONAL
 
   # ---- Daycare ----------------------------------------------------------
+  # `child` is just an internal key matched against closures/ledger.py's
+  # school->child map (see gaps.py) — it doesn't need to be a real name,
+  # and shouldn't be if this file is ever committed/shared. Put the kids'
+  # actual names/ages in .env's CHILDREN_JSON instead (see .env.example).
+  #
   # Brightwheel: only works if your center enabled "add to personal calendar".
   # If so, paste that iCal URL into .env as ICAL_BRIGHTWHEEL.
-  - name: "Brightwheel (Max)"
+  - name: "Brightwheel"
     type: ical
     category: daycare
-    child: Max
+    child: kid1
     enabled: false          # flip to true once you have the sync URL
     secret: ICAL_BRIGHTWHEEL
-  # Goddard Family Hub has no feed. Generate a term .ics once from the school-
-  # year calendar PDF and drop it here; update the path.
-  - name: "Goddard (Ellie)"
+  # A school with no feed. Generate a term .ics once from the school-year
+  # calendar PDF and drop it here; update the path.
+  - name: "School (no feed)"
     type: ical
     category: daycare
-    child: Ellie
+    child: kid2
     enabled: false          # flip to true once the .ics exists
-    url: "file://./data/goddard-term.ics"
+    url: "file://./data/school-term.ics"
 
   # ---- Local (Maplewood / South Orange / Millburn) ----------------------
   # Prefer real event feeds. Grab the iCal "subscribe" link off each LibCal

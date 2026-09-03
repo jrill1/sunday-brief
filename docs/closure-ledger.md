@@ -76,7 +76,7 @@ For each extracted item, on the way into the ledger:
 4. **Compose the title** deterministically from type + active + reason
    (e.g. `"Goddard closed — Faculty In-Service"`; a canceled row →
    `"Goddard open — PD Day canceled"`). Gap-detector-friendly.
-5. **Derive `child` from `school`** via config (Goddard→ChildB, Le Parc→ChildA).
+5. **Derive `child` from `school`** via config (Goddard→kid2, Le Parc→kid1).
    The LLM does not guess the child.
 6. **Attach provenance** pulled from the forwarded message headers (see §3).
 7. **Assign `record_id`** (unique per row) and stamp `date_added`.
@@ -94,7 +94,7 @@ One row **per day**. Append-only.
 {
   "record_id": "led_8f2c9a",
   "school": "Goddard",
-  "child": "ChildB",
+  "child": "kid2",
   "date": "2026-08-27",
   "type": "closure",
   "active": 1,
@@ -180,7 +180,7 @@ audit) and is a *different* thing from the calendar cross-source dedup elsewhere
   event just vanishes next run, and there's no `source_date` precedence or
   cancellation lifecycle to fold. They stay as the live `Event` model and meet the
   **folded** closure state at the **briefing layer** — that's where a hand-entered
-  "ChildB school closed" calendar event gets reconciled against the Goddard
+  "kid2 school closed" calendar event gets reconciled against the Goddard
   ledger's Aug 27 closure (same day, two sources → one line).
 - **Briefing layer:** reading the fold for the target week, re-collapsing spans,
   deciding relevance (e.g. not flagging weekend closures as coverage gaps),

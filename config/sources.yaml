@@ -1,6 +1,8 @@
 # Your live config. Start with just your own two calendars; add your spouse's
 # once this works. Secret iCal URLs go in .env (referenced by `secret:` below),
-# never here — so this file is safe to commit and sync to the Mini.
+# never here — so this file is safe to commit and sync to the Mini. Same goes
+# for the kids' names/ages — those live in .env as CHILDREN_JSON (see
+# .env.example), not here, since unlike this file .env never gets committed.
 
 window_days: 7
 
@@ -10,13 +12,6 @@ summary:
   names:                    # used by narrative mode to write in 3rd person
     me: Justin
     spouse: Maria
-  children:                 # age_months as of `as_of`; current age is computed
-    - name: ChildA          # fresh every run, so it never needs manual updates
-      age_months: 48
-      as_of: "2026-09-02"
-    - name: ChildB
-      age_months: 18
-      as_of: "2026-09-02"
 
 sources:
   # ---- You (start here) -------------------------------------------------
@@ -44,10 +39,13 @@ sources:
     secret: ICAL_SPOUSE_PERSONAL
 
     # ---- Daycare ----------------------------------------------------------
-  - name: "Brightwheel (ChildA)"
+  # `child` is just an internal key to match this feed's closures against
+  # ledger.py's CHILD_BY_SCHOOL — it doesn't need to be a real name, so it
+  # isn't one.
+  - name: "Brightwheel"
     type: ical
     category: daycare
-    child: ChildA
+    child: kid1
     secret: ICAL_BRIGHTWHEEL
 
   # ---- Local (weekend/extracurricular picks) -----------------------------

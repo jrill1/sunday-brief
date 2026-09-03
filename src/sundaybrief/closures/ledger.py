@@ -16,7 +16,10 @@ from pathlib import Path
 from .reader import EmailDoc
 
 # school -> child. Belongs in config long-term; hardcoded map for now.
-CHILD_BY_SCHOOL = {"Goddard": "ChildB", "Le Parc": "ChildA"}
+# "kid1"/"kid2" are just internal keys matched against config/sources.yaml's
+# per-source `child:` field (see gaps.py's ledger_keys reconciliation) — not
+# real names, so real names never need to live in tracked code either.
+CHILD_BY_SCHOOL = {"Goddard": "kid2", "Le Parc": "kid1"}
 
 
 def _daterange(start: date, end: date):
