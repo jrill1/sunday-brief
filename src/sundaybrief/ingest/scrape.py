@@ -1,17 +1,19 @@
 """Non-iCal local sources: RSS feeds, WordPress "The Events Calendar" JSON,
-a LibNet/EventKeeper library-calendar JSON endpoint, and (stubbed) headless
-rendering.
+a LibNet/EventKeeper library-calendar JSON endpoint, a "Modern Events
+Calendar" WordPress plugin HTML scrape, and (stubbed) headless rendering.
 
 Order of preference — always try the cheapest that works:
   1. iCal feed    -> use ingest.ical instead (best)
   2. RSS          -> ingest_rss (coarse: uses publish date, good for newsletters)
   3. wp-events    -> ingest_wp_events (The Events Calendar REST API, real dates)
   4. libnet-events -> ingest_libnet_events (LibNet/EventKeeper's own JSON, no auth)
-  5. headless     -> render JS with Playwright (last resort; not implemented yet)
+  5. mec-events   -> ingest_mec_events (Modern Events Calendar, server-rendered HTML)
+  6. headless     -> render JS with Playwright (last resort; not implemented yet)
 """
 from __future__ import annotations
 
 import json
+import re
 from datetime import datetime
 
 import feedparser
@@ -143,6 +145,77 @@ def ingest_libnet_events(source: dict, window_start: datetime, window_end: datet
                 age_group=(item.get("ages") or "").strip(),
             )
         )
+    return events
+
+
+_MEC_TIME_RE = re.compile(r"(\d{1,2}):(\d{2})\s*(am|pm)", re.IGNORECASE)
+
+
+def _mec_start_time(text: str) -> tuple[int, int] | None:
+    """First "H:MMam/pm" in a time range like "1:00 pm - 8:00 pm" -> 24h (hour, minute)."""
+    m = _MEC_TIME_RE.search(text)
+    if not m:
+        return None
+    hour, minute, ampm = int(m.group(1)), int(m.group(2)), m.group(3).lower()
+    if ampm == "pm" and hour != 12:
+        hour += 12
+    if ampm == "am" and hour == 12:
+        hour = 0
+    return hour, minute
+
+
+def ingest_mec_events(source: dict, window_start: datetime, window_end: datetime, timeout: int = 30) -> list[Event]:
+    """"Modern Events Calendar" WordPress plugin — renders event listings
+    server-side (unlike libnet-events), so a plain HTML fetch + BeautifulSoup
+    works, no API or JS rendering needed. Each day's events sit in a
+    <div class="mec-calendar-events-sec" data-mec-cell="YYYYMMDD"> block.
+
+    Point `url` at the actual calendar page (e.g.
+    https://palletbrewing.com/eventscal/), not just the site root — MEC only
+    renders whichever month(s) that specific page view covers, so a window
+    reaching much further out than "the next month or two" may come back
+    thin; this doesn't paginate into future months.
+    """
+    from bs4 import BeautifulSoup
+
+    try:
+        resp = requests.get(
+            source["url"], timeout=timeout,
+            headers={"User-Agent": "sunday-brief/0.1 (personal calendar aggregator)"},
+        )
+        resp.raise_for_status()
+    except requests.RequestException:
+        return []
+
+    soup = BeautifulSoup(resp.text, "html.parser")
+    events: list[Event] = []
+    for day_sec in soup.select(".mec-calendar-events-sec[data-mec-cell]"):
+        try:
+            day = datetime.strptime(day_sec["data-mec-cell"], "%Y%m%d")
+        except ValueError:
+            continue
+        if not (window_start.date() <= day.date() <= window_end.date()):
+            continue
+        for article in day_sec.select(".mec-event-article"):
+            title_el = article.select_one(".mec-event-title a")
+            if not title_el:
+                continue
+            time_el = article.select_one(".mec-event-time")
+            hm = _mec_start_time(time_el.get_text(" ", strip=True)) if time_el else None
+            start = day.replace(hour=hm[0], minute=hm[1]) if hm else day
+            loc_el = article.select_one(".mec-event-loc-place")
+            events.append(
+                Event(
+                    title=title_el.get_text(strip=True),
+                    start=to_local(start),
+                    end=None,
+                    all_day=hm is None,
+                    source=source["name"],
+                    category=source["category"],
+                    location=loc_el.get_text(strip=True) if loc_el else "",
+                    url=title_el.get("href", ""),
+                )
+            )
     return events
 
 

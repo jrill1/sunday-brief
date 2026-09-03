@@ -148,6 +148,8 @@ def _brief_facts(sig: WeekSignals, names: dict | None = None) -> str:
     for e in sig.picks:
         if re.match(r"(?i)^closed\b", e.title.strip()):
             continue  # a venue-closure notice, not something to suggest
+        if e.age_group.strip().lower() == "adults":
+            continue  # an explicit, unambiguous exclude — not a judgment call
         add(e.day, f"LOCAL OPTION: {e.timelabel()} {e.title}", e.url, ages=e.age_group)
 
     if not by_day:
@@ -383,10 +385,16 @@ def build_weekend_picks(
     url) comes straight from the actual Event objects, so there's no chance
     of a hallucinated detail landing in a real notification.
     """
-    # A venue-closure notice ("CLOSED - Labor Day Weekend") isn't an event to
-    # suggest — it's the opposite. Filter these out deterministically rather
-    # than trust the model to catch it every time (it doesn't always).
-    candidates_pool = [e for e in sig.picks if not re.match(r"(?i)^closed\b", e.title.strip())]
+    # Two deterministic filters, rather than trusting the model to catch
+    # these every time (it doesn't always, even with an explicit rule):
+    # a venue-closure notice ("CLOSED - Labor Day Weekend") isn't an event to
+    # suggest, and a source-tagged "ages: Adults" is an explicit, unambiguous
+    # signal — not a judgment call the way an untagged title is.
+    candidates_pool = [
+        e for e in sig.picks
+        if not re.match(r"(?i)^closed\b", e.title.strip())
+        and e.age_group.strip().lower() != "adults"
+    ]
     if not candidates_pool:
         return None
     try:
@@ -396,7 +404,7 @@ def build_weekend_picks(
 
     numbered = list(enumerate(candidates_pool, 1))
     candidates = "\n".join(
-        f"{n}. {e.day:%a %b %-d} {e.timelabel()} — {e.title}"
+        f"{n}. {e.day:%a %b %-d} {e.timelabel()} — {e.title} @ {e.source}"
         + (f" (ages: {e.age_group})" if e.age_group else "")
         for n, e in numbered
     )
@@ -404,33 +412,41 @@ def build_weekend_picks(
     prompt = (
         "You are picking WEEKEND / EXTRACURRICULAR event suggestions for a "
         f"family with two young kids in Maplewood, NJ: {kids_phrase}. Below "
-        "is this week's full raw candidate list — "
-        "every local event happening on a weekend day or a daycare-closure "
-        "day. Most of these are NOT relevant (adult classes, town/committee "
-        "meetings, teen or senior programs, routine closures) — pick only "
-        "genuinely kid- or family-friendly ones: storytimes, craft/art "
-        "activities, family movies, festivals, toddler/preschool programs — "
-        "anything that would actually work for either kid, or both together, "
-        f"at their current ages.\n\nPick up to {_MAX_PICKS}, best first. Fewer is "
-        "fine — never pad with a weak pick just to hit the count, and output "
-        "nothing at all if none genuinely qualify. The list below is the "
+        "is this week's full raw candidate list — every local event "
+        "happening on a weekend day or a daycare-closure day.\n\n"
+        "PRIORITIZE genuinely kid- or family-friendly ones first — "
+        "storytimes, craft/art activities, family movies, festivals, "
+        "toddler/preschool programs, anything that would actually work for "
+        "either kid, or both together, at their current ages. But don't "
+        "RESTRICT to only those — a casual, family-viable outing that isn't "
+        "specifically a kids' program still counts (a brewery's trivia "
+        "night or an open-turntables session, for instance, is fair game as "
+        "a \"stop by for 45 minutes\" family outing), just rank it below "
+        "anything that's actually built for kids. Only exclude something a "
+        "family genuinely couldn't attend or get anything out of — an "
+        "explicitly adults-only/21+ event, a business/committee meeting, a "
+        "structured program whose own (ages: ...) tag says it's for a "
+        "different audience (adults, teens, seniors), a routine closure "
+        "notice, or anything that just isn't an event at all.\n\n"
+        f"Pick up to {_MAX_PICKS}, best first — kid-specific picks ranked "
+        "above general family-viable ones. Fewer is fine — never pad with a "
+        "weak pick just to hit the count, and output nothing at all if "
+        "nothing on the list is even family-viable. The list below is the "
         "COMPLETE candidate list for this week, however long or short it "
         "is — some weeks have just one or two candidates, or none at all; "
         "that's normal, not a truncated or partial list.\n\n"
-        "Each candidate is a day/time/title, and SOME also carry a real "
-        "(ages: ...) tag straight from the source — trust that tag when "
-        "it's there (e.g. \"ages: Adults\" is a clear exclude; \"ages: "
-        "Toddlers, Pre-K\" is a clear include). When there's no (ages: ...) "
-        "tag, judge from the title alone, and when it's genuinely ambiguous "
-        "about audience (e.g. \"Chess Lessons\", \"Craft Club\" — plausibly "
-        "fine for a young child, just not clearly stated either way), lean "
-        "toward INCLUDING it rather than excluding it — the reader can tap "
-        "through for the real details themselves. Only exclude a title that "
-        "clearly signals the wrong audience (adult-only, a business/"
-        "committee meeting, teen or senior-specific, a routine closure "
-        "notice) or clearly isn't an event at all. Never ask for more "
-        "information or comment on the list or on missing detail — just "
-        "make your best call from what's given and output your answer.\n\n"
+        "Each candidate is a day/time/title @ venue, and SOME also carry a "
+        "real (ages: ...) tag straight from the source — trust that tag when "
+        "it's there (e.g. \"ages: Adults\" means it's a program built "
+        "specifically for adults, not just adult-leaning — exclude it; "
+        "\"ages: Toddlers, Pre-K\" is a clear kid-specific include). When "
+        "there's no (ages: ...) tag, judge from the title AND venue "
+        "together — a brewery/bar venue makes an otherwise-neutral title "
+        "(\"Open Turntables\", \"Trivia Night\") adult-leaning rather than "
+        "kid-specific, which is fine, just lower-priority, not an automatic "
+        "exclude. Never ask for more information or comment on the list or "
+        "on missing detail — just make your best call from what's given and "
+        "output your answer.\n\n"
         "Output ONLY the candidate numbers, one per line, best first, "
         "nothing else — no titles, no explanation, no extra text.\n\n"
         f"CANDIDATES:\n{candidates}"
@@ -450,9 +466,15 @@ def build_weekend_picks(
     by_num = dict(numbered)
     picked = []
     for line in raw.splitlines():
-        line = line.strip().rstrip(".")
-        if line.isdigit() and int(line) in by_num and by_num[int(line)] not in picked:
-            picked.append(by_num[int(line)])
+        # Usually just a bare number, but the model sometimes adds its own
+        # "1. 4" rank prefix despite being told not to — take the LAST
+        # number on the line either way, which handles both correctly.
+        nums = re.findall(r"\d+", line)
+        if not nums:
+            continue
+        n = int(nums[-1])
+        if n in by_num and by_num[n] not in picked:
+            picked.append(by_num[n])
     picked = picked[:_MAX_PICKS]
     if not picked:
         return None

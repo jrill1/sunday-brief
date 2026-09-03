@@ -59,6 +59,10 @@ sources:
     type: libnet-events
     category: local
     url: "https://maplewoodlibrary.libnet.info"
+  - name: "Pallet Brewing"
+    type: mec-events
+    category: local
+    url: "https://palletbrewing.com/eventscal/"
 
   # More local sources come later — see config/sources.example.yaml for the
   # full menu of source types.
