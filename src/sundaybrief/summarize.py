@@ -414,10 +414,11 @@ def build_weekend_picks(sig: WeekSignals, model: str, api_key: str) -> list[str]
     for e in picked:
         when = f"{e.day:%a %-m/%-d} {e.timelabel()}"
         title = html.escape(e.title.title())
+        venue = f" @ {html.escape(e.source)}" if e.source else ""
         if e.url:
-            lines.append(f'<b>{when}</b> <a href="{html.escape(e.url)}">{title}</a>')
+            lines.append(f'<b>{when}</b> <a href="{html.escape(e.url)}">{title}</a>{venue}')
         else:
-            lines.append(f"<b>{when}</b> {title}")
+            lines.append(f"<b>{when}</b> {title}{venue}")
 
     messages, current = [], ""
     for line in lines:
