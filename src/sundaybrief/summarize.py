@@ -52,7 +52,7 @@ def build_templated(sig: WeekSignals) -> tuple[str, str]:
     """Return (title, html_message), guaranteed <= PUSHOVER_LIMIT chars."""
     start = sig.window_start.strftime("%b %-d")
     end = (sig.window_end).strftime("%b %-d")
-    title = f"Family week · {start}–{end}"
+    title = f"Sunday Brief · {start}–{end}"
 
     parts: list[str] = []
 
