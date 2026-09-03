@@ -378,13 +378,16 @@ _LOCATION_SOURCES = {"Millburn Library", "Maplewood Library", "Pallet Brewing"}
 
 def build_weekend_picks(
     sig: WeekSignals, model: str, api_key: str, children: list[dict] | None = None,
-) -> list[str] | None:
+) -> str | None:
     """Ask Claude to pick up to 8 genuinely kid-friendly events from this
     week's weekend/closure-day local candidates (sig.picks — already scoped
     to focus days by gaps.analyze()), for a third "Weekend/extracurricular
-    picks" Pushover push. Returns a list of message chunks (each within
-    PUSHOVER_LIMIT — usually just one), or None if there's nothing to send
-    (no candidates, none qualify, or the call fails).
+    picks" Pushover push. Returns a single message (within PUSHOVER_LIMIT —
+    trimmed to fit rather than split across multiple pushes, dropping the
+    model's lowest-priority picks first if not everything fits), or None if
+    there's nothing to send (no candidates, none qualify, or the call fails).
+    Display order is chronological regardless of the model's own "best
+    first" preference order, which is only used to decide what to keep.
 
     The model only ever SELECTS by number from the candidate list — it never
     rewrites a title or invents a link. All display text (day, time, title,
@@ -485,8 +488,7 @@ def build_weekend_picks(
     if not picked:
         return None
 
-    lines = []
-    for e in picked:
+    def _format(e):
         when = f"{e.day:%a %-m/%-d} {e.timelabel()}"
         title = html.escape(e.title.title())
         # Only a real, physical single venue for these three — the rest are
@@ -495,19 +497,22 @@ def build_weekend_picks(
         # be misleading rather than useful.
         venue = f" @ {html.escape(e.source)}" if e.source in _LOCATION_SOURCES else ""
         if e.url:
-            lines.append(f'<b>{when}</b> <a href="{html.escape(e.url)}">{title}</a>{venue}')
-        else:
-            lines.append(f"<b>{when}</b> {title}{venue}")
+            return f'<b>{when}</b> <a href="{html.escape(e.url)}">{title}</a>{venue}'
+        return f"<b>{when}</b> {title}{venue}"
 
-    messages, current = [], ""
-    for line in lines:
-        candidate = f"{current}\n{line}" if current else line
-        if len(candidate) > PUSHOVER_LIMIT and current:
-            messages.append(current)
-            current = line
-        else:
-            current = candidate
-    if current:
-        messages.append(current)
-    return messages or None
-    return message, links_message
+    # Always a single Pushover message. Trim in the model's own "best first"
+    # order, so if not everything fits, it's the lowest-priority picks that
+    # get dropped — then re-order whatever survives chronologically, since
+    # that's how a reader actually wants to scan a list of picks.
+    fits: list = []
+    message = ""
+    for e in picked:
+        candidate = f"{message}\n{_format(e)}" if message else _format(e)
+        if len(candidate) > PUSHOVER_LIMIT:
+            break
+        message = candidate
+        fits.append(e)
+
+    fits.sort(key=lambda e: e.start)
+    message = "\n".join(_format(e) for e in fits)
+    return message or None

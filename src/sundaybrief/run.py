@@ -174,14 +174,12 @@ def main(argv: list[str] | None = None) -> int:
             print("=" * 48)
             print(f"\n[dry run] {len(links_message)} chars — would POST as a follow-up")
         if weekend_picks:
-            for i, chunk in enumerate(weekend_picks, 1):
-                print("\n" + "=" * 48)
-                print(f"{title} · Weekend/extracurricular picks"
-                      + (f" ({i}/{len(weekend_picks)})" if len(weekend_picks) > 1 else ""))
-                print("-" * 48)
-                print(chunk)
-                print("=" * 48)
-                print(f"\n[dry run] {len(chunk)} chars — would POST as a follow-up")
+            print("\n" + "=" * 48)
+            print(f"{title} · Weekend/extracurricular picks")
+            print("-" * 48)
+            print(weekend_picks)
+            print("=" * 48)
+            print(f"\n[dry run] {len(weekend_picks)} chars — would POST as a follow-up")
         return 0
 
     token = get_secret("PUSHOVER_TOKEN")
@@ -200,12 +198,8 @@ def main(argv: list[str] | None = None) -> int:
             links_result = send_pushover(token, user, f"{title} · links", links_message)
             print(f"Sent follow-up links. Pushover status={links_result.get('status')}", file=sys.stderr)
         if weekend_picks:
-            for i, chunk in enumerate(weekend_picks, 1):
-                picks_title = f"{title} · Weekend/extracurricular picks"
-                if len(weekend_picks) > 1:
-                    picks_title += f" ({i}/{len(weekend_picks)})"
-                picks_result = send_pushover(token, user, picks_title, chunk)
-                print(f"Sent weekend picks. Pushover status={picks_result.get('status')}", file=sys.stderr)
+            picks_result = send_pushover(token, user, f"{title} · Weekend/extracurricular picks", weekend_picks)
+            print(f"Sent weekend picks. Pushover status={picks_result.get('status')}", file=sys.stderr)
     return 0
 
 
