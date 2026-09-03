@@ -43,5 +43,11 @@ sources:
     child: ChildA
     secret: ICAL_BRIGHTWHEEL
 
-  # Daycare + local sources come later — see config/sources.example.yaml for
-  # the full menu of source types.
+  # ---- Local (weekend/extracurricular picks) -----------------------------
+  - name: "Millburn Library"
+    type: ical
+    category: local
+    url: "https://millburnlibrary.libcal.com/ical_subscribe.php?cid=6309"
+
+  # More local sources come later — see config/sources.example.yaml for the
+  # full menu of source types.

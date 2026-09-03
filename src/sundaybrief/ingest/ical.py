@@ -97,7 +97,7 @@ def ingest_ical(
                 location=str(comp.get("location", "")).strip(),
                 person=source.get("person", ""),
                 child=source.get("child", ""),
-                url=_event_link(calendar_id, comp.get("uid")),
+                url=_event_link(calendar_id, comp.get("uid")) or str(comp.get("url", "")).strip(),
             )
         )
     return events

@@ -327,3 +327,107 @@ def build_narrative(
     if links_message and len(links_message) > PUSHOVER_LIMIT:
         links_message = None  # drop the follow-up rather than failing the whole brief
     return message, links_message
+
+
+_MAX_PICKS = 8
+
+
+def build_weekend_picks(sig: WeekSignals, model: str, api_key: str) -> list[str] | None:
+    """Ask Claude to pick up to 8 genuinely kid-friendly events from this
+    week's weekend/closure-day local candidates (sig.picks — already scoped
+    to focus days by gaps.analyze()), for a third "Weekend/extracurricular
+    picks" Pushover push. Returns a list of message chunks (each within
+    PUSHOVER_LIMIT — usually just one), or None if there's nothing to send
+    (no candidates, none qualify, or the call fails).
+
+    The model only ever SELECTS by number from the candidate list — it never
+    rewrites a title or invents a link. All display text (day, time, title,
+    url) comes straight from the actual Event objects, so there's no chance
+    of a hallucinated detail landing in a real notification.
+    """
+    if not sig.picks:
+        return None
+    try:
+        from anthropic import Anthropic
+    except ImportError:
+        return None
+
+    numbered = list(enumerate(sig.picks, 1))
+    candidates = "\n".join(
+        f"{n}. {e.day:%a %b %-d} {e.timelabel()} — {e.title}" for n, e in numbered
+    )
+    prompt = (
+        "You are picking WEEKEND / EXTRACURRICULAR event suggestions for a "
+        "family with two young kids (ages 4 and 1.5) in Maplewood, NJ. Below "
+        "is this week's full raw candidate list — every local event "
+        "happening on a weekend day or a daycare-closure day. Most of these "
+        "are NOT relevant (adult classes, town/committee meetings, teen or "
+        "senior programs, routine closures) — pick only genuinely kid- or "
+        "family-friendly ones: storytimes, craft/art activities, family "
+        "movies, festivals, toddler/preschool programs — anything a parent "
+        "with a 4-year-old and a 1.5-year-old would actually want to know "
+        f"about.\n\nPick up to {_MAX_PICKS}, best first. Fewer is fine — "
+        "never pad with a weak pick just to hit the count, and output "
+        "nothing at all if none genuinely qualify. The list below is the "
+        "COMPLETE candidate list for this week, however long or short it "
+        "is — some weeks have just one or two candidates, or none at all; "
+        "that's normal, not a truncated or partial list.\n\n"
+        "You are ONLY given a day/time/title for each candidate, as shown "
+        "below — nothing more is available, so judge each one from its "
+        "title alone. When a title is genuinely ambiguous about audience "
+        "(e.g. \"Chess Lessons\", \"Craft Club\" — plausibly fine for a young "
+        "child, just not clearly stated either way), lean toward INCLUDING "
+        "it rather than excluding it — the reader can tap through for the "
+        "real details themselves. Only exclude a title that clearly signals "
+        "the wrong audience (adult-only, a business/committee meeting, teen "
+        "or senior-specific, a routine closure notice) or clearly isn't an "
+        "event at all. Never ask for more information or comment on the "
+        "list or on missing detail — just make your best call from the "
+        "title alone and output your answer.\n\n"
+        "Output ONLY the candidate numbers, one per line, best first, "
+        "nothing else — no titles, no explanation, no extra text.\n\n"
+        f"CANDIDATES:\n{candidates}"
+    )
+    try:
+        client = Anthropic(api_key=api_key)
+        resp = client.messages.create(
+            model=model,
+            max_tokens=500,
+            thinking={"type": "disabled"},
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = "".join(block.text for block in resp.content if block.type == "text").strip()
+    except Exception:
+        return None
+
+    by_num = dict(numbered)
+    picked = []
+    for line in raw.splitlines():
+        line = line.strip().rstrip(".")
+        if line.isdigit() and int(line) in by_num and by_num[int(line)] not in picked:
+            picked.append(by_num[int(line)])
+    picked = picked[:_MAX_PICKS]
+    if not picked:
+        return None
+
+    lines = []
+    for e in picked:
+        when = f"{e.day:%a %-m/%-d} {e.timelabel()}"
+        title = html.escape(e.title.title())
+        if e.url:
+            lines.append(f'<b>{when}</b> <a href="{html.escape(e.url)}">{title}</a>')
+        else:
+            lines.append(f"<b>{when}</b> {title}")
+
+    messages, current = [], ""
+    for line in lines:
+        candidate = f"{current}\n{line}" if current else line
+        if len(candidate) > PUSHOVER_LIMIT and current:
+            messages.append(current)
+            current = line
+        else:
+            current = candidate
+    if current:
+        messages.append(current)
+    return messages or None
+    return message, links_message

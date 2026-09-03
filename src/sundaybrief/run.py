@@ -22,7 +22,7 @@ from .gaps import analyze
 from .ingest import INGESTERS
 from .models import LOCAL_TZ
 from .secrets import get_secret
-from .summarize import build_narrative, build_templated
+from .summarize import build_narrative, build_templated, build_weekend_picks
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -137,8 +137,8 @@ def main(argv: list[str] | None = None) -> int:
     style = args.style or config["summary"]["style"]
     title, message = build_templated(signals)
     links_message = None
+    api_key = get_secret("ANTHROPIC_API_KEY", required=False)
     if style == "narrative":
-        api_key = get_secret("ANTHROPIC_API_KEY", required=False)
         if api_key:
             narrative = build_narrative(
                 signals, config["summary"]["model"], api_key, names=config["summary"]["names"],
@@ -149,6 +149,10 @@ def main(argv: list[str] | None = None) -> int:
                 print("narrative unavailable — using templated brief", file=sys.stderr)
         else:
             print("no ANTHROPIC_API_KEY — using templated brief", file=sys.stderr)
+
+    # Weekend/extracurricular picks are independent of style (needs an LLM
+    # call either way, to judge which local candidates are kid-appropriate).
+    weekend_picks = build_weekend_picks(signals, config["summary"]["model"], api_key) if api_key else None
 
     full_url = config["summary"].get("full_brief_url", "")
 
@@ -166,6 +170,15 @@ def main(argv: list[str] | None = None) -> int:
             print(links_message)
             print("=" * 48)
             print(f"\n[dry run] {len(links_message)} chars — would POST as a follow-up")
+        if weekend_picks:
+            for i, chunk in enumerate(weekend_picks, 1):
+                print("\n" + "=" * 48)
+                print(f"{title} · Weekend/extracurricular picks"
+                      + (f" ({i}/{len(weekend_picks)})" if len(weekend_picks) > 1 else ""))
+                print("-" * 48)
+                print(chunk)
+                print("=" * 48)
+                print(f"\n[dry run] {len(chunk)} chars — would POST as a follow-up")
         return 0
 
     token = get_secret("PUSHOVER_TOKEN")
@@ -183,6 +196,13 @@ def main(argv: list[str] | None = None) -> int:
         if links_message:
             links_result = send_pushover(token, user, f"{title} · links", links_message)
             print(f"Sent follow-up links. Pushover status={links_result.get('status')}", file=sys.stderr)
+        if weekend_picks:
+            for i, chunk in enumerate(weekend_picks, 1):
+                picks_title = f"{title} · Weekend/extracurricular picks"
+                if len(weekend_picks) > 1:
+                    picks_title += f" ({i}/{len(weekend_picks)})"
+                picks_result = send_pushover(token, user, picks_title, chunk)
+                print(f"Sent weekend picks. Pushover status={picks_result.get('status')}", file=sys.stderr)
     return 0
 
 
