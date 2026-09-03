@@ -369,6 +369,12 @@ def build_narrative(
 
 _MAX_PICKS = 8
 
+# Sources (config/sources.yaml `name`) that are themselves a real, physical
+# venue — worth showing as "@ <name>" on a pick. The rest are aggregators
+# (Village Green, Maplewood Online) pulling in events from many actual
+# venues, so their own name isn't a useful "where" for any given event.
+_LOCATION_SOURCES = {"Millburn Library", "Maplewood Library", "Pallet Brewing"}
+
 
 def build_weekend_picks(
     sig: WeekSignals, model: str, api_key: str, children: list[dict] | None = None,
@@ -483,7 +489,11 @@ def build_weekend_picks(
     for e in picked:
         when = f"{e.day:%a %-m/%-d} {e.timelabel()}"
         title = html.escape(e.title.title())
-        venue = f" @ {html.escape(e.source)}" if e.source else ""
+        # Only a real, physical single venue for these three — the rest are
+        # aggregators (Village Green, Maplewood Online) whose source name
+        # isn't where the event actually happens, so "@ Village Green" would
+        # be misleading rather than useful.
+        venue = f" @ {html.escape(e.source)}" if e.source in _LOCATION_SOURCES else ""
         if e.url:
             lines.append(f'<b>{when}</b> <a href="{html.escape(e.url)}">{title}</a>{venue}')
         else:
