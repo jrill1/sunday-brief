@@ -12,7 +12,7 @@ import yaml
 
 from .secrets import get_secret
 
-VALID_TYPES = {"ical", "rss", "wp-events", "headless"}
+VALID_TYPES = {"ical", "rss", "wp-events", "libnet-events", "headless"}
 VALID_CATEGORIES = {"work", "personal", "daycare", "local"}
 
 
@@ -62,5 +62,6 @@ def load_config(path: str | Path) -> dict:
     summary.setdefault("model", "claude-sonnet-5")
     summary.setdefault("full_brief_url", "")
     summary.setdefault("names", {})              # {"me": "...", "spouse": "..."}, narrative-only
+    summary.setdefault("children", [])           # [{"name","age_months","as_of"}], see summarize._child_ages_phrase
 
     return {"sources": resolved, "summary": summary, "window_days": cfg.get("window_days", 7)}

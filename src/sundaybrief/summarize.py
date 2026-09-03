@@ -12,11 +12,37 @@ from __future__ import annotations
 
 import html
 import re
-from datetime import timedelta
+from datetime import date, timedelta
+
+from dateutil.relativedelta import relativedelta
 
 from .gaps import WeekSignals, days_covered
 
 PUSHOVER_LIMIT = 1024
+
+
+def _child_ages_phrase(children: list[dict] | None) -> str:
+    """"ChildA (4y) and ChildB (1y 7mo)" — computed fresh from each
+    child's age-in-months as of a reference date (config's `summary.children`:
+    [{"name","age_months","as_of"}]), rather than a hardcoded age string, so
+    it never needs manual updating and can't silently drift out of date —
+    every brief just recomputes "now" from that one fixed reference point.
+    Falls back to a generic phrase if no children are configured.
+    """
+    if not children:
+        return "two young kids"
+    parts = []
+    today = date.today()
+    for c in children:
+        as_of = date.fromisoformat(c["as_of"])
+        elapsed = relativedelta(today, as_of)
+        total_months = int(c["age_months"]) + elapsed.years * 12 + elapsed.months
+        years, months = divmod(max(total_months, 0), 12)
+        age = f"{years}y" + (f" {months}mo" if months else "")
+        parts.append(f"{c['name']} ({age})")
+    if len(parts) == 1:
+        return parts[0]
+    return ", ".join(parts[:-1]) + f" and {parts[-1]}"
 
 
 def _fmt_day(d) -> str:
@@ -98,9 +124,11 @@ def _brief_facts(sig: WeekSignals, names: dict | None = None) -> str:
     names = names or {}
     by_day: dict = {}
 
-    def add(d, text, url, context=""):
+    def add(d, text, url, context="", ages=""):
         if context:
             text += f" (CONTEXT: {context})"
+        if ages:
+            text += f" (AGES: {ages})"
         if url:
             text += f" (LINK: {url})"
         by_day.setdefault(d, []).append(text)
@@ -118,7 +146,9 @@ def _brief_facts(sig: WeekSignals, names: dict | None = None) -> str:
         who = names.get(e.person, e.person) or e.category
         add(e.day, f"{e.timelabel()} [{who}] {e.title}", e.url)
     for e in sig.picks:
-        add(e.day, f"LOCAL OPTION: {e.timelabel()} {e.title}", e.url)
+        if re.match(r"(?i)^closed\b", e.title.strip()):
+            continue  # a venue-closure notice, not something to suggest
+        add(e.day, f"LOCAL OPTION: {e.timelabel()} {e.title}", e.url, ages=e.age_group)
 
     if not by_day:
         return "No notable events this week."
@@ -221,6 +251,7 @@ def _parse_narrative_response(
 
 def build_narrative(
     sig: WeekSignals, model: str, api_key: str, names: dict | None = None,
+    children: list[dict] | None = None,
 ) -> tuple[str, str | None] | None:
     """Ask Claude for a warm <900-char brief, cited like footnotes, split into
     (message, links_message). `links_message` is a second, separate Pushover
@@ -249,9 +280,10 @@ def build_narrative(
         f'third person — never "you," "I," "your spouse," or "me."\n\n'
         if me_name and spouse_name else ""
     )
+    kids_phrase = _child_ages_phrase(children)
     prompt = (
         "You are writing a warm, practical weekly heads-up for a family with "
-        "two young kids (ages 4 and 1.5) in Maplewood, NJ — like a friend "
+        f"two young kids ({kids_phrase}) in Maplewood, NJ — like a friend "
         "summarizing the week for them, not writing a report. "
         f"{people_line}"
         "Below is a day-by-day digest of this week for you to read and "
@@ -262,7 +294,11 @@ def build_narrative(
         "also carry a (CONTEXT: ...) — extra detail the school's email itself "
         "stated (a reschedule, unusual urgency or repetition). When present, "
         "weave it naturally into the sentence rather than bolting it on — it's "
-        "often the most useful part of the fact.\n\n"
+        "often the most useful part of the fact. A LOCAL OPTION may carry a "
+        "(AGES: ...) — the source's own age-group tag; trust it over guessing "
+        "from the title (e.g. AGES: Adults means it does NOT fit young kids, "
+        "even if the title sounds otherwise), and only cite a LOCAL OPTION as "
+        "the pick for kids if it's genuinely age-appropriate.\n\n"
         "This message will be split into two separate text messages, so use "
         "footnote-style citations instead of inline links: when you mention a "
         "fact that has a (LINK: url), put a bracketed number right after it "
@@ -332,7 +368,9 @@ def build_narrative(
 _MAX_PICKS = 8
 
 
-def build_weekend_picks(sig: WeekSignals, model: str, api_key: str) -> list[str] | None:
+def build_weekend_picks(
+    sig: WeekSignals, model: str, api_key: str, children: list[dict] | None = None,
+) -> list[str] | None:
     """Ask Claude to pick up to 8 genuinely kid-friendly events from this
     week's weekend/closure-day local candidates (sig.picks — already scoped
     to focus days by gaps.analyze()), for a third "Weekend/extracurricular
@@ -345,45 +383,54 @@ def build_weekend_picks(sig: WeekSignals, model: str, api_key: str) -> list[str]
     url) comes straight from the actual Event objects, so there's no chance
     of a hallucinated detail landing in a real notification.
     """
-    if not sig.picks:
+    # A venue-closure notice ("CLOSED - Labor Day Weekend") isn't an event to
+    # suggest — it's the opposite. Filter these out deterministically rather
+    # than trust the model to catch it every time (it doesn't always).
+    candidates_pool = [e for e in sig.picks if not re.match(r"(?i)^closed\b", e.title.strip())]
+    if not candidates_pool:
         return None
     try:
         from anthropic import Anthropic
     except ImportError:
         return None
 
-    numbered = list(enumerate(sig.picks, 1))
+    numbered = list(enumerate(candidates_pool, 1))
     candidates = "\n".join(
-        f"{n}. {e.day:%a %b %-d} {e.timelabel()} — {e.title}" for n, e in numbered
+        f"{n}. {e.day:%a %b %-d} {e.timelabel()} — {e.title}"
+        + (f" (ages: {e.age_group})" if e.age_group else "")
+        for n, e in numbered
     )
+    kids_phrase = _child_ages_phrase(children)
     prompt = (
         "You are picking WEEKEND / EXTRACURRICULAR event suggestions for a "
-        "family with two young kids (ages 4 and 1.5) in Maplewood, NJ. Below "
-        "is this week's full raw candidate list — every local event "
-        "happening on a weekend day or a daycare-closure day. Most of these "
-        "are NOT relevant (adult classes, town/committee meetings, teen or "
-        "senior programs, routine closures) — pick only genuinely kid- or "
-        "family-friendly ones: storytimes, craft/art activities, family "
-        "movies, festivals, toddler/preschool programs — anything a parent "
-        "with a 4-year-old and a 1.5-year-old would actually want to know "
-        f"about.\n\nPick up to {_MAX_PICKS}, best first. Fewer is fine — "
-        "never pad with a weak pick just to hit the count, and output "
+        f"family with two young kids in Maplewood, NJ: {kids_phrase}. Below "
+        "is this week's full raw candidate list — "
+        "every local event happening on a weekend day or a daycare-closure "
+        "day. Most of these are NOT relevant (adult classes, town/committee "
+        "meetings, teen or senior programs, routine closures) — pick only "
+        "genuinely kid- or family-friendly ones: storytimes, craft/art "
+        "activities, family movies, festivals, toddler/preschool programs — "
+        "anything that would actually work for either kid, or both together, "
+        f"at their current ages.\n\nPick up to {_MAX_PICKS}, best first. Fewer is "
+        "fine — never pad with a weak pick just to hit the count, and output "
         "nothing at all if none genuinely qualify. The list below is the "
         "COMPLETE candidate list for this week, however long or short it "
         "is — some weeks have just one or two candidates, or none at all; "
         "that's normal, not a truncated or partial list.\n\n"
-        "You are ONLY given a day/time/title for each candidate, as shown "
-        "below — nothing more is available, so judge each one from its "
-        "title alone. When a title is genuinely ambiguous about audience "
-        "(e.g. \"Chess Lessons\", \"Craft Club\" — plausibly fine for a young "
-        "child, just not clearly stated either way), lean toward INCLUDING "
-        "it rather than excluding it — the reader can tap through for the "
-        "real details themselves. Only exclude a title that clearly signals "
-        "the wrong audience (adult-only, a business/committee meeting, teen "
-        "or senior-specific, a routine closure notice) or clearly isn't an "
-        "event at all. Never ask for more information or comment on the "
-        "list or on missing detail — just make your best call from the "
-        "title alone and output your answer.\n\n"
+        "Each candidate is a day/time/title, and SOME also carry a real "
+        "(ages: ...) tag straight from the source — trust that tag when "
+        "it's there (e.g. \"ages: Adults\" is a clear exclude; \"ages: "
+        "Toddlers, Pre-K\" is a clear include). When there's no (ages: ...) "
+        "tag, judge from the title alone, and when it's genuinely ambiguous "
+        "about audience (e.g. \"Chess Lessons\", \"Craft Club\" — plausibly "
+        "fine for a young child, just not clearly stated either way), lean "
+        "toward INCLUDING it rather than excluding it — the reader can tap "
+        "through for the real details themselves. Only exclude a title that "
+        "clearly signals the wrong audience (adult-only, a business/"
+        "committee meeting, teen or senior-specific, a routine closure "
+        "notice) or clearly isn't an event at all. Never ask for more "
+        "information or comment on the list or on missing detail — just "
+        "make your best call from what's given and output your answer.\n\n"
         "Output ONLY the candidate numbers, one per line, best first, "
         "nothing else — no titles, no explanation, no extra text.\n\n"
         f"CANDIDATES:\n{candidates}"

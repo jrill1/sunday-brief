@@ -141,7 +141,8 @@ def main(argv: list[str] | None = None) -> int:
     if style == "narrative":
         if api_key:
             narrative = build_narrative(
-                signals, config["summary"]["model"], api_key, names=config["summary"]["names"],
+                signals, config["summary"]["model"], api_key,
+                names=config["summary"]["names"], children=config["summary"]["children"],
             )
             if narrative:
                 message, links_message = narrative
@@ -152,7 +153,9 @@ def main(argv: list[str] | None = None) -> int:
 
     # Weekend/extracurricular picks are independent of style (needs an LLM
     # call either way, to judge which local candidates are kid-appropriate).
-    weekend_picks = build_weekend_picks(signals, config["summary"]["model"], api_key) if api_key else None
+    weekend_picks = build_weekend_picks(
+        signals, config["summary"]["model"], api_key, children=config["summary"]["children"],
+    ) if api_key else None
 
     full_url = config["summary"].get("full_brief_url", "")
 

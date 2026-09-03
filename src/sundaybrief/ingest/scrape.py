@@ -1,14 +1,17 @@
 """Non-iCal local sources: RSS feeds, WordPress "The Events Calendar" JSON,
-and (stubbed) headless rendering.
+a LibNet/EventKeeper library-calendar JSON endpoint, and (stubbed) headless
+rendering.
 
 Order of preference — always try the cheapest that works:
-  1. iCal feed  -> use ingest.ical instead (best)
-  2. RSS        -> ingest_rss (coarse: uses publish date, good for newsletters)
-  3. wp-events  -> ingest_wp_events (The Events Calendar REST API, real dates)
-  4. headless   -> render JS with Playwright (last resort; not implemented yet)
+  1. iCal feed    -> use ingest.ical instead (best)
+  2. RSS          -> ingest_rss (coarse: uses publish date, good for newsletters)
+  3. wp-events    -> ingest_wp_events (The Events Calendar REST API, real dates)
+  4. libnet-events -> ingest_libnet_events (LibNet/EventKeeper's own JSON, no auth)
+  5. headless     -> render JS with Playwright (last resort; not implemented yet)
 """
 from __future__ import annotations
 
+import json
 from datetime import datetime
 
 import feedparser
@@ -84,6 +87,60 @@ def ingest_wp_events(source: dict, window_start: datetime, window_end: datetime,
                 category=source["category"],
                 location=((item.get("venue") or {}).get("venue") or ""),
                 url=item.get("url", ""),
+            )
+        )
+    return events
+
+
+def ingest_libnet_events(source: dict, window_start: datetime, window_end: datetime, timeout: int = 30) -> list[Event]:
+    """LibNet/EventKeeper library-calendar JSON (the `eeventcaldata` endpoint
+    the site's own event list calls) — no auth needed, unlike the platform's
+    documented Communico REST API (which needs OAuth credentials only the
+    library can issue). Reverse-engineered from the site's own Network tab
+    since it exposes no public iCal/RSS feed; may break if the platform
+    changes its internal API, in which case this needs a fresh look.
+
+    Point `url` at the site root (e.g. https://maplewoodlibrary.libnet.info).
+    """
+    base = source["url"].rstrip("/")
+    req = json.dumps({
+        "private": False,
+        "date": window_start.strftime("%Y-%m-%d"),
+        "days": (window_end.date() - window_start.date()).days,
+        "locations": [],
+        "ages": [],
+        "types": [],
+    })
+    try:
+        resp = requests.get(
+            f"{base}/eeventcaldata", params={"event_type": 0, "req": req}, timeout=timeout,
+            headers={"User-Agent": "sunday-brief/0.1 (personal calendar aggregator)"},
+        )
+        resp.raise_for_status()
+        payload = resp.json()
+    except (requests.RequestException, ValueError):
+        return []
+    if not isinstance(payload, list):
+        return []
+
+    events: list[Event] = []
+    for item in payload:
+        try:
+            start = to_local(datetime.fromisoformat(item["raw_start_time"]))
+            end = to_local(datetime.fromisoformat(item["raw_end_time"])) if item.get("raw_end_time") else None
+        except (KeyError, ValueError):
+            continue
+        events.append(
+            Event(
+                title=(item.get("title") or "(untitled)").strip(),
+                start=start,
+                end=end,
+                all_day=False,
+                source=source["name"],
+                category=source["category"],
+                location=(item.get("location") or "").strip(),
+                url=item.get("url", ""),
+                age_group=(item.get("ages") or "").strip(),
             )
         )
     return events

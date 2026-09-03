@@ -10,6 +10,13 @@ summary:
   names:                    # used by narrative mode to write in 3rd person
     me: Justin
     spouse: Maria
+  children:                 # age_months as of `as_of`; current age is computed
+    - name: ChildA          # fresh every run, so it never needs manual updates
+      age_months: 48
+      as_of: "2026-09-02"
+    - name: ChildB
+      age_months: 18
+      as_of: "2026-09-02"
 
 sources:
   # ---- You (start here) -------------------------------------------------
@@ -48,6 +55,10 @@ sources:
     type: ical
     category: local
     url: "https://millburnlibrary.libcal.com/ical_subscribe.php?cid=6309"
+  - name: "Maplewood Library"
+    type: libnet-events
+    category: local
+    url: "https://maplewoodlibrary.libnet.info"
 
   # More local sources come later — see config/sources.example.yaml for the
   # full menu of source types.

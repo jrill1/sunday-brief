@@ -42,6 +42,7 @@ class Event:
     person: str = ""     # which parent, for calendar categories
     child: str = ""      # which kid, for daycare categories
     context: str = ""    # ledger-only: extra narrative detail beyond title, see closures/ledger.py
+    age_group: str = ""  # local-only: source's own age-group tag, when it has one (e.g. "Toddlers, Pre-K")
     sources: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
