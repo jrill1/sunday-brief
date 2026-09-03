@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import datetime
+from datetime import date, datetime
 
 import feedparser
 import requests
@@ -290,6 +290,63 @@ def ingest_mec_events(source: dict, window_start: datetime, window_end: datetime
                 )
             )
     return events
+
+
+def ingest_worldwebs_events(source: dict, window_start: datetime, window_end: datetime, timeout: int = 30) -> list[Event]:
+    """"Maplewood Online" (worldwebs.com platform) community calendar —
+    renders server-side, so a plain HTML fetch + BeautifulSoup works, no API
+    or JS rendering needed. The month-grid view only shows a day-level date
+    per event (no time), so every event here comes through as all-day.
+
+    Fetches one page per (year, month) the window spans, via ?year=Y&month=M
+    query params on `url` (point it at the base calendar path, e.g.
+    https://maplewoodonline.com/calendar/).
+    """
+    from bs4 import BeautifulSoup
+
+    base = source["url"].rstrip("/")
+    months: set[tuple[int, int]] = set()
+    d = window_start.date().replace(day=1)
+    while d <= window_end.date():
+        months.add((d.year, d.month))
+        d = date(d.year + 1, 1, 1) if d.month == 12 else date(d.year, d.month + 1, 1)
+
+    events: list[Event] = []
+    for year, month in months:
+        try:
+            resp = requests.get(
+                f"{base}/", params={"year": year, "month": f"{month:02d}"}, timeout=timeout,
+                headers={"User-Agent": "sunday-brief/0.1 (personal calendar aggregator)"},
+            )
+            resp.raise_for_status()
+        except requests.RequestException:
+            continue
+        soup = BeautifulSoup(resp.text, "html.parser")
+        for row in soup.select(".cal-day-row"):
+            date_el = row.select_one(".event_date .eventfull_date")
+            if not date_el or not date_el.get_text(strip=True).isdigit():
+                continue
+            day = int(date_el.get_text(strip=True))
+            try:
+                day_date = datetime(year, month, day)
+            except ValueError:
+                continue
+            for a in row.select('a[class*="event-name-"]'):
+                title = a.get_text(strip=True).lstrip("- ").strip()
+                if not title:
+                    continue
+                events.append(
+                    Event(
+                        title=title,
+                        start=to_local(day_date),
+                        end=None,
+                        all_day=True,
+                        source=source["name"],
+                        category=source["category"],
+                        url=a.get("href", ""),
+                    )
+                )
+    return [e for e in events if window_start <= e.start <= window_end]
 
 
 def ingest_headless(source: dict, window_start: datetime, window_end: datetime, **_) -> list[Event]:

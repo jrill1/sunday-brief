@@ -10,6 +10,7 @@ from .scrape import (
     ingest_mec_events,
     ingest_rss,
     ingest_wp_events,
+    ingest_worldwebs_events,
 )
 
 INGESTERS = {
@@ -19,11 +20,12 @@ INGESTERS = {
     "libnet-events": ingest_libnet_events,
     "mec-events": ingest_mec_events,
     "cityspark-events": ingest_cityspark_events,
+    "worldwebs-events": ingest_worldwebs_events,
     "headless": ingest_headless,
 }
 
 __all__ = [
     "INGESTERS", "ingest_ical", "ingest_rss", "ingest_wp_events",
     "ingest_libnet_events", "ingest_mec_events", "ingest_cityspark_events",
-    "ingest_headless",
+    "ingest_worldwebs_events", "ingest_headless",
 ]

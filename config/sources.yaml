@@ -67,6 +67,10 @@ sources:
     type: cityspark-events
     category: local
     url: "https://portal.cityspark.com/PortalScripts/VillageGreenNJ"
+  - name: "Maplewood Online"
+    type: worldwebs-events
+    category: local
+    url: "https://maplewoodonline.com/calendar/"
 
   # More local sources come later — see config/sources.example.yaml for the
   # full menu of source types.

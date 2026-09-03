@@ -12,7 +12,10 @@ import yaml
 
 from .secrets import get_secret
 
-VALID_TYPES = {"ical", "rss", "wp-events", "libnet-events", "mec-events", "cityspark-events", "headless"}
+VALID_TYPES = {
+    "ical", "rss", "wp-events", "libnet-events", "mec-events",
+    "cityspark-events", "worldwebs-events", "headless",
+}
 VALID_CATEGORIES = {"work", "personal", "daycare", "local"}
 
 
