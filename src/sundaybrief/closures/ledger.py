@@ -198,3 +198,65 @@ def source_link(row: dict) -> str:
         return ""
     query = "rfc822msgid:" + mid
     return "sundaybrief://open?q=" + urllib.parse.quote(query, safe="")
+
+
+# The iOS counterpart of the Android opener: an iOS Shortcut with this exact
+# name (see ios-opener/README.md) that copies its text input to the clipboard
+# and opens Gmail.
+IOS_SHORTCUT_NAME = "BriefOpen"
+_OPENER_LINK = re.compile(r'sundaybrief://open\?q=([^"\s<]+)')
+
+
+def _ios_query(row: dict) -> str:
+    """Gmail search for the school's *original* email behind a row.
+
+    Not the Message-ID: a ledger row's source_message_id is the ID of the
+    parent's manual forward to the drop-box, which only exists in the
+    forwarder's Sent folder (and the drop-box) — so it can't be found from
+    the other parent's own mailbox. The school's original went to both
+    parents, so sender domain + subject finds it in either. The subject is cut
+    to a few words (a quoted Gmail phrase still matches as a prefix) to keep
+    the link short, since a Pushover message is capped at 1024 chars.
+    """
+    m = re.search(r"@([\w.-]+)", row.get("source_from") or "")
+    subject = re.sub(r'["\']', "", row.get("source_subject") or "").strip()
+    if len(subject) > 40:
+        subject = subject[:40].rsplit(" ", 1)[0]
+    parts = []
+    if m:
+        parts.append(f"from:{m.group(1)}")
+    if subject:
+        parts.append(f'subject:"{subject}"')
+    if parts:
+        return " ".join(parts)
+    mid = (row.get("source_message_id") or "").strip().strip("<>")
+    return f"rfc822msgid:{mid}"
+
+
+def localize_links(text: str, platform: str, ledger_rows: list[dict]) -> str:
+    """Rewrite the canonical (Android) opener links in `text` for `platform`.
+
+    Links are built once, platform-neutral, as sundaybrief://open?q=rfc822msgid:<id>
+    (see source_link); this swaps them per recipient at send time. Android is
+    the canonical form, so it's returned untouched. On iOS each link becomes a
+    shortcuts://run-shortcut link, using the ledger row behind that Message-ID
+    to build the sender+subject search (see _ios_query). A link whose row
+    can't be found keeps its Message-ID search rather than breaking.
+    """
+    if platform != "ios":
+        return text
+    by_mid = {
+        (r.get("source_message_id") or "").strip().strip("<>"): r for r in ledger_rows
+    }
+
+    def swap(m: re.Match) -> str:
+        query = urllib.parse.unquote(m.group(1))
+        row = by_mid.get(query.removeprefix("rfc822msgid:"))
+        if row:
+            query = _ios_query(row)
+        name = urllib.parse.quote(IOS_SHORTCUT_NAME, safe="")
+        # "&amp;", not "&": this lands inside an href in Pushover's HTML.
+        return (f"shortcuts://run-shortcut?name={name}&amp;input=text&amp;text="
+                + urllib.parse.quote(query, safe=""))
+
+    return _OPENER_LINK.sub(swap, text)

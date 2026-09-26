@@ -4,7 +4,8 @@ A weekly family calendar digest for a home Mac Mini. It pulls each parent's
 Google calendars and the kids' daycare calendars, folds in local Maplewood /
 South Orange / Millburn events, finds the moments that actually matter (daycare
 closures, half-days, open weekend windows), and pushes a short brief to the
-family via Pushover every Sunday morning.
+family via Pushover every Sunday morning (the coming week) and a shorter one
+every Friday morning (just the coming Saturday–Sunday).
 
 It's designed as a **black box**: the Mini never logs into any real account. It
 holds only read-only iCal capability URLs, a read-only key to a throwaway inbox,
@@ -104,10 +105,13 @@ In `config/sources.yaml`:
 
 ## Scheduling (launchd)
 
-Two independent jobs, both LaunchAgents under your logged-in user — the right
+Three independent jobs, all LaunchAgents under your logged-in user — the right
 choice for an auto-login Mini, and required if you use the Keychain option:
 
 - `./scripts/install-launchd.sh` — the weekly brief itself (Sundays at 9am).
+- `./scripts/install-launchd-friday.sh` — the Friday brief (Fridays at 9am):
+  `--brief friday`, same pipeline over just the coming Saturday–Sunday. Both
+  briefs go to both parents.
 - `./scripts/install-launchd-ledger.sh` — pulls new forwarded school emails
   from the drop-box daily (8am) and appends any closures/notes to
   `data/closures.jsonl`, so the ledger is always fresh by the time Sunday's
@@ -118,9 +122,25 @@ choice for an auto-login Mini, and required if you use the Keychain option:
 launchctl start com.sunday.brief           # run the weekly brief once now to test
 tail -f brief.log
 
+launchctl start com.sunday.brief.friday    # run the Friday brief once now to test
+tail -f friday.log
+
 launchctl start com.sunday.brief.ledger    # run the ledger job once now to test
 tail -f ledger.log
 ```
+
+To preview either brief by hand: `python -m sundaybrief.run --brief friday --dry-run`.
+`--to me|spouse` sends to one recipient only (titled `[Test]`), and
+`--platform ios --dry-run` previews the source-email links as an iPhone gets them.
+
+## Source-email links, per phone
+
+A brief's source-email links open a companion that copies a Gmail search and
+opens Gmail, since neither Gmail app can be deep-linked to a search. Which
+companion depends on the recipient's phone, set in `.env`:
+`PUSHOVER_USER_PLATFORM` / `PUSHOVER_USER_SPOUSE_PLATFORM` = `android` (default)
+or `ios`. See `android-opener/` (a small app) and `ios-opener/` (an iOS
+Shortcut named `BriefOpen`).
 
 ## Secrets: .env vs Keychain
 

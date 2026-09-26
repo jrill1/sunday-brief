@@ -17,6 +17,7 @@ from datetime import date, timedelta
 
 from dateutil.relativedelta import relativedelta
 
+from .briefs import SUNDAY, BriefKind
 from .gaps import WeekSignals, days_covered
 
 PUSHOVER_LIMIT = 1024
@@ -75,11 +76,13 @@ def _flag_line(event) -> str:
     return f"{_day_range(event)}: {title}"
 
 
-def build_templated(sig: WeekSignals) -> tuple[str, str]:
+def build_templated(sig: WeekSignals, kind: BriefKind = SUNDAY) -> tuple[str, str]:
     """Return (title, html_message), guaranteed <= PUSHOVER_LIMIT chars."""
     start = sig.window_start.strftime("%b %-d")
-    end = (sig.window_end).strftime("%b %-d")
-    title = f"Sunday Brief · {start}–{end}"
+    # window_end is exclusive; a fixed Sat–Sun window should read "Sep 26–27",
+    # not "Sep 26–28". (The Sunday brief keeps its long-standing display.)
+    last = sig.window_end - timedelta(days=1) if kind.fixed_weekend else sig.window_end
+    title = f"{kind.title} · {start}–{last.strftime('%b %-d')}"
 
     parts: list[str] = []
 
@@ -100,7 +103,7 @@ def build_templated(sig: WeekSignals) -> tuple[str, str]:
         parts.append(f"<b>Notes</b>\n{notes}")
 
     if not parts:
-        parts.append("Nothing flagged this week — calendars look clear.")
+        parts.append(f"Nothing flagged {kind.this_period} — calendars look clear.")
 
     message = "\n\n".join(parts)
     if len(message) > PUSHOVER_LIMIT:
@@ -108,7 +111,7 @@ def build_templated(sig: WeekSignals) -> tuple[str, str]:
     return title, message
 
 
-def _brief_facts(sig: WeekSignals, names: dict | None = None) -> str:
+def _brief_facts(sig: WeekSignals, names: dict | None = None, kind: BriefKind = SUNDAY) -> str:
     """Day-by-day digest handed to Claude as grounding.
 
     Grouped by calendar day rather than one flat list per category, so a
@@ -154,7 +157,7 @@ def _brief_facts(sig: WeekSignals, names: dict | None = None) -> str:
         add(e.day, f"LOCAL OPTION: {e.timelabel()} {e.title}", e.url, ages=e.age_group)
 
     if not by_day:
-        return "No notable events this week."
+        return f"No notable events {kind.this_period}."
 
     lines = []
     d = sig.window_start.date()
@@ -254,7 +257,7 @@ def _parse_narrative_response(
 
 def build_narrative(
     sig: WeekSignals, model: str, api_key: str, names: dict | None = None,
-    children: list[dict] | None = None,
+    children: list[dict] | None = None, kind: BriefKind = SUNDAY,
 ) -> tuple[str, str | None] | None:
     """Ask Claude for a warm <900-char brief, cited like footnotes, split into
     (message, links_message). `links_message` is a second, separate Pushover
@@ -275,7 +278,7 @@ def build_narrative(
         return None
 
     names = names or {}
-    facts = _brief_facts(sig, names)
+    facts = _brief_facts(sig, names, kind)
     me_name, spouse_name = names.get("me"), names.get("spouse")
     people_line = (
         f'The two parents are {me_name} and {spouse_name}, and this brief is '
@@ -285,11 +288,11 @@ def build_narrative(
     )
     kids_phrase = _child_ages_phrase(children)
     prompt = (
-        "You are writing a warm, practical weekly heads-up for a family with "
+        f"You are writing a warm, practical {kind.heads_up} for a family with "
         f"two young kids ({kids_phrase}) in Maplewood, NJ — like a friend "
-        "summarizing the week for them, not writing a report. "
+        f"summarizing {kind.this_period} for them, not writing a report. "
         f"{people_line}"
-        "Below is a day-by-day digest of this week for you to read and "
+        f"Below is a day-by-day digest of {kind.this_period} for you to read and "
         "summarize: CLOSURE/HALF-DAY/NOTE facts from school sources, each "
         "parent's own calendar events tagged by name, and LOCAL OPTION facts "
         "for nearby events. Some facts carry a (LINK: url) — a link back to "
@@ -362,7 +365,7 @@ def build_narrative(
     if parsed is None:
         return None
     message, links_message = parsed
-    message = f"Hi, it's Sunday!\n\n{message}"
+    message = f"{kind.greeting}\n\n{message}"
     if len(message) > PUSHOVER_LIMIT:
         return None
     if links_message and len(links_message) > PUSHOVER_LIMIT:

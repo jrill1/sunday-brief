@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Install the Friday-morning launchd job (the Sat–Sun brief) on THIS machine
+# (run it on the Mini).
+# Figures out the repo location and venv python automatically, so there are
+# no paths to hand-edit and the same repo works on any Mac.
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PYTHON="$REPO_ROOT/.venv/bin/python"
+LOG="$REPO_ROOT/friday.log"
+TEMPLATE="$REPO_ROOT/scripts/com.sunday.brief.friday.plist.template"
+DEST="$HOME/Library/LaunchAgents/com.sunday.brief.friday.plist"
+
+if [[ ! -x "$PYTHON" ]]; then
+    echo "error: no venv python at $PYTHON" >&2
+    echo "  create it first:  python3 -m venv .venv && source .venv/bin/activate && pip install -e ." >&2
+    exit 1
+fi
+
+mkdir -p "$HOME/Library/LaunchAgents"
+sed -e "s|__PYTHON__|$PYTHON|g" \
+    -e "s|__WORKDIR__|$REPO_ROOT|g" \
+    -e "s|__LOG__|$LOG|g" \
+    "$TEMPLATE" > "$DEST"
+
+launchctl unload "$DEST" 2>/dev/null || true
+launchctl load "$DEST"
+
+echo "Installed $DEST"
+echo "  python:  $PYTHON"
+echo "  workdir: $REPO_ROOT"
+echo
+echo "Run it once now to test:   launchctl start com.sunday.brief.friday"
+echo "Watch the log:             tail -f $LOG"
+echo "Uninstall:                 launchctl unload $DEST && rm $DEST"

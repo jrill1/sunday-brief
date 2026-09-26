@@ -6,6 +6,24 @@ import requests
 PUSHOVER_ENDPOINT = "https://api.pushover.net/1/messages.json"
 
 
+def split_message(text: str, limit: int = 1024) -> list[str]:
+    """Split a multi-line message into chunks of at most `limit` chars, on line
+    boundaries. A single over-long line is left whole (Pushover will truncate
+    it) rather than cut mid-link."""
+    chunks: list[str] = []
+    current = ""
+    for line in text.split("\n"):
+        candidate = f"{current}\n{line}" if current else line
+        if current and len(candidate) > limit:
+            chunks.append(current)
+            current = line
+        else:
+            current = candidate
+    if current:
+        chunks.append(current)
+    return chunks
+
+
 def send_pushover(
     token: str,
     user: str,

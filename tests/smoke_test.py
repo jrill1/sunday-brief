@@ -14,6 +14,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
+from sundaybrief.briefs import FRIDAY          # noqa: E402
+from sundaybrief.closures.ledger import localize_links, source_link  # noqa: E402
+from sundaybrief.deliver import split_message  # noqa: E402
 from sundaybrief.dedupe import dedupe          # noqa: E402
 from sundaybrief.gaps import analyze           # noqa: E402
 from sundaybrief.ingest.ical import ingest_ical  # noqa: E402
@@ -88,10 +91,50 @@ def main() -> int:
     assert len(message) <= PUSHOVER_LIMIT, f"message too long: {len(message)}"
     assert "Daycare" in message and "Local picks" in message
 
+    _check_friday_window()
+    _check_ios_links()
+    _check_split_message()
+
     print("OK — all assertions passed")
     print(f"\nTitle: {title}\nLength: {len(message)} chars (limit {PUSHOVER_LIMIT})\n")
     print(message)
     return 0
+
+
+def _check_friday_window() -> None:
+    # Mon–Sat resolve to the coming (or current) Sat–Sun; Sunday, to the next one.
+    for day, expect in ((21, (9, 26)), (25, (9, 26)), (26, (9, 26)), (27, (10, 3))):
+        start, end = FRIDAY.default_window(datetime(2026, 9, day, 9, 0, tzinfo=LOCAL_TZ))
+        assert (start.month, start.day) == expect, (day, start)
+        assert start.weekday() == 5 and (end - start).days == 2
+    sig = analyze([], datetime(2026, 9, 26, tzinfo=LOCAL_TZ), datetime(2026, 9, 28, tzinfo=LOCAL_TZ))
+    title, _ = build_templated(sig, FRIDAY)
+    assert title == "Friday Brief · Sep 26–Sep 27", title
+
+
+def _check_ios_links() -> None:
+    row = {
+        "source_message_id": "<CAabc123@mail.gmail.com>",
+        "source_from": "Front Office <office@sunnybrookacademy.example.com>",
+        "source_subject": "Reminder: Wed. 8/19: Field Trip to the Aquarium",
+    }
+    android = source_link(row)
+    assert android.startswith("sundaybrief://open?q=rfc822msgid")
+    html_text = f'<a href="{android}">Field trip (Gmail)</a>'
+    assert localize_links(html_text, "android", [row]) == html_text   # untouched
+    ios = localize_links(html_text, "ios", [row])
+    assert "shortcuts://run-shortcut?name=BriefOpen&amp;input=text&amp;text=" in ios, ios
+    assert "sunnybrookacademy.example.com" in ios and "sundaybrief://" not in ios
+    # A link with no matching ledger row falls back to its Message-ID search.
+    assert "rfc822msgid" in localize_links(html_text, "ios", [])
+
+
+def _check_split_message() -> None:
+    lines = [f"line {i} " + "x" * 90 for i in range(30)]
+    chunks = split_message("\n".join(lines), 1024)
+    assert len(chunks) > 1 and all(len(c) <= 1024 for c in chunks)
+    assert "\n".join(chunks) == "\n".join(lines)          # nothing lost or reordered
+    assert split_message("short") == ["short"]
 
 
 def _parse_inline(ics_text, name, category, start, end, child=""):
