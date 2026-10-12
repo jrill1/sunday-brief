@@ -9,7 +9,7 @@ Run:  python tests/smoke_test.py
 from __future__ import annotations
 
 import sys
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
@@ -19,6 +19,8 @@ from sundaybrief.closures.ledger import localize_links, source_link  # noqa: E40
 from sundaybrief.deliver import split_message  # noqa: E402
 from sundaybrief.dedupe import dedupe          # noqa: E402
 from sundaybrief.gaps import analyze           # noqa: E402
+from sundaybrief.models import Event, to_local  # noqa: E402
+from sundaybrief.summarize import _brief_facts  # noqa: E402
 from sundaybrief.ingest.ical import ingest_ical  # noqa: E402
 from sundaybrief.models import LOCAL_TZ        # noqa: E402
 from sundaybrief.summarize import PUSHOVER_LIMIT, build_templated  # noqa: E402
@@ -92,6 +94,7 @@ def main() -> int:
     assert "Daycare" in message and "Local picks" in message
 
     _check_friday_window()
+    _check_multiday_parent_event()
     _check_ios_links()
     _check_split_message()
 
@@ -99,6 +102,24 @@ def main() -> int:
     print(f"\nTitle: {title}\nLength: {len(message)} chars (limit {PUSHOVER_LIMIT})\n")
     print(message)
     return 0
+
+
+def _check_multiday_parent_event() -> None:
+    # A 3-day all-day personal event should appear on every day it covers in
+    # the narrative digest, not just its first — see gaps.analyze().
+    start = datetime(2026, 8, 3, 0, 0, tzinfo=LOCAL_TZ)   # Monday
+    end = start + timedelta(days=7)
+    trip = Event(
+        title="Visiting Grandma", start=to_local(date(2026, 8, 4)),
+        end=to_local(date(2026, 8, 7)),  # iCal-style exclusive end: covers 4,5,6
+        all_day=True, source="Alex — personal", category="personal", person="me",
+    )
+    sig = analyze([trip], start, end)
+    covered_days = {e.day for e in sig.parent_events}
+    assert covered_days == {date(2026, 8, 4), date(2026, 8, 5), date(2026, 8, 6)}, covered_days
+    facts = _brief_facts(sig)
+    for d in ("Tue Aug 4", "Wed Aug 5", "Thu Aug 6"):
+        assert d in facts and "Visiting Grandma" in facts.split(d, 1)[1].split("\n", 1)[0]
 
 
 def _check_friday_window() -> None:

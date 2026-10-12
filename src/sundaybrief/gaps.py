@@ -199,7 +199,18 @@ def analyze(
 
     for e in events:
         if e.category in ("work", "personal"):
-            sig.parent_events.append(e)
+            if e.all_day and e.end and e.end.date() > e.day:
+                # A multi-day all-day event (e.g. a week away) otherwise only
+                # anchors to its first day — e.day is just start.date() — so
+                # _brief_facts would only ever see it on day one and the
+                # narrative model has no idea it's still in effect on day
+                # three. Explode it into one atom per day it covers, clipped
+                # to the window, same treatment _scan_calendar_closures
+                # already gives closures/half-days.
+                for d in _days_in_window(e, window_start.date(), window_end.date()):
+                    sig.parent_events.append(replace(e, start=to_local(d), end=None))
+            else:
+                sig.parent_events.append(e)
         elif e.category == "daycare":
             sig.daycare_events.append(e)
         elif e.category == "local":
