@@ -2,6 +2,7 @@
 # (via `secret:`), so it's safe to commit and travels to the Mini with the repo.
 # Never paste a bearer iCal URL directly into sources.yaml — put it in .env.
 .env
+*.local.md
 data/
 *.log
 .venv/
