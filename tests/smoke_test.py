@@ -156,8 +156,8 @@ def _check_organizer_attribution() -> None:
 def _check_child_attribution() -> None:
     # A school NOTE/CLOSURE fact should name which kid it's about in the
     # narrative digest when the ledger row carries one, and a hand-typed
-    # calendar closure banner ("Max school closed") should resolve to
-    # the real configured name, not an opaque placeholder token.
+    # calendar closure banner ("Max school closed") should resolve to the
+    # real configured name, not an opaque placeholder token.
     start = datetime(2026, 10, 11, tzinfo=LOCAL_TZ)
     end = start + timedelta(days=7)
     children = [
