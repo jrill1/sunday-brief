@@ -95,6 +95,8 @@ def main() -> int:
 
     _check_friday_window()
     _check_multiday_parent_event()
+    _check_organizer_attribution()
+    _check_child_attribution()
     _check_ios_links()
     _check_split_message()
 
@@ -120,6 +122,66 @@ def _check_multiday_parent_event() -> None:
     facts = _brief_facts(sig)
     for d in ("Tue Aug 4", "Wed Aug 5", "Thu Aug 6"):
         assert d in facts and "Visiting Grandma" in facts.split(d, 1)[1].split("\n", 1)[0]
+
+
+def _check_organizer_attribution() -> None:
+    # Maria organizes an appointment; it lands on Justin's personal feed
+    # first (sources.yaml order) with no ORGANIZER of its own (Google's own
+    # export convention — see ingest/ical.py), and on her feed second, with
+    # ORGANIZER filled in. The merged event should still end up tagged
+    # "spouse", not "me" just because Justin's feed was scanned first.
+    mine = Event(
+        title="Imaging", start=to_local(date(2026, 10, 13)), end=None,
+        all_day=True, source="My personal", category="personal", person="me",
+        organizer="",
+    )
+    hers = Event(
+        title="Imaging", start=to_local(date(2026, 10, 13)), end=None,
+        all_day=True, source="Spouse — personal", category="personal", person="spouse",
+        organizer="maria.grimaldi@later.com",
+    )
+    names = {"me": "Justin", "spouse": "Maria"}
+    merged = dedupe([mine, hers], names=names)
+    assert len(merged) == 1 and merged[0].person == "spouse", merged[0].person
+
+    # No organizer at all (the common case) leaves person exactly as dedupe's
+    # existing "first-scanned feed wins" rule already set it.
+    plain = dedupe([
+        Event(title="Standup", start=to_local(date(2026, 10, 13)), end=None,
+              all_day=True, source="My work", category="work", person="me"),
+    ], names=names)
+    assert plain[0].person == "me"
+
+
+def _check_child_attribution() -> None:
+    # A school NOTE/CLOSURE fact should name which kid it's about in the
+    # narrative digest when the ledger row carries one, and a hand-typed
+    # calendar closure banner ("Max school closed") should resolve to
+    # the real configured name, not an opaque placeholder token.
+    start = datetime(2026, 10, 11, tzinfo=LOCAL_TZ)
+    end = start + timedelta(days=7)
+    children = [
+        {"name": "Max", "age_months": 48, "as_of": "2026-09-02", "school": "Le Parc"},
+        {"name": "Priya", "age_months": 18, "as_of": "2026-09-02", "school": "Goddard"},
+    ]
+    ledger_rows = [{
+        "record_id": "led_test1", "school": "Goddard", "child": "Priya",
+        "date": "2026-10-16", "type": "note", "active": 1,
+        "reason": "Parent Presentation - Diwali", "context": "",
+        "title": "Goddard note — Parent Presentation - Diwali",
+        "source_message_id": "<test@mail.gmail.com>",
+    }]
+    sig = analyze([], start, end, ledger_rows=ledger_rows, children=children)
+    assert sig.notes and sig.notes[0].child == "Priya"
+    facts = _brief_facts(sig)
+    assert "NOTE (Priya): Goddard note" in facts, facts
+
+    banner = Event(
+        title="Max school closed", start=to_local(date(2026, 10, 13)), end=None,
+        all_day=True, source="My personal", category="personal", person="me",
+    )
+    sig2 = analyze([banner], start, end, children=children)
+    assert sig2.closures and sig2.closures[0].child == "Max"
 
 
 def _check_friday_window() -> None:

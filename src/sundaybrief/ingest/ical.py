@@ -86,6 +86,13 @@ def ingest_ical(
         dtstart = comp.get("dtstart").dt
         dtend_prop = comp.get("dtend")
         all_day = not isinstance(dtstart, datetime)
+        organizer_prop = comp.get("organizer")
+        # Google's export convention: a feed often omits ORGANIZER on the
+        # organizer's own copy (it's implied to be them), but states it
+        # explicitly on every other attendee's copy of the same event — so
+        # this is frequently empty here and filled in later, once dedupe has
+        # the other feed's copy to compare against (see dedupe._person_from_organizer).
+        organizer = str(organizer_prop).removeprefix("mailto:").strip() if organizer_prop else ""
         events.append(
             Event(
                 title=summary,
@@ -95,6 +102,7 @@ def ingest_ical(
                 source=source["name"],
                 category=source["category"],
                 location=str(comp.get("location", "")).strip(),
+                organizer=organizer,
                 person=source.get("person", ""),
                 child=source.get("child", ""),
                 url=_event_link(calendar_id, comp.get("uid")) or str(comp.get("url", "")).strip(),

@@ -39,6 +39,8 @@ class Event:
     category: str        # one of: work, personal, daycare, local
     location: str = ""
     url: str = ""
+    organizer: str = ""  # work/personal only: the ORGANIZER email off the raw
+                          # iCal VEVENT, when present — see dedupe._person_from_organizer
     person: str = ""     # which parent, for calendar categories
     child: str = ""      # which kid, for daycare categories
     context: str = ""    # ledger-only: extra narrative detail beyond title, see closures/ledger.py

@@ -13,6 +13,10 @@ wins. Someone cross-posting a plan to their work calendar too doesn't make it
 work-related — putting it on their personal calendar at all is the signal that
 matters, and it doesn't depend on the order sources.yaml happens to list feeds in.
 
+A second exception, for `person`: a shared calendar invite's own ORGANIZER
+says who actually created it, which doesn't have to match whichever parent's
+feed sources.yaml happens to list first — see _person_from_organizer.
+
 Exact title+day matching misses the same LOCAL event worded differently by two
 different aggregator sources (e.g. "Late Summer Streets in Maplewood" vs
 "Maplewood Village Summer Streets") — plain text-similarity can't reliably
@@ -29,7 +33,27 @@ import sys
 from .models import Event
 
 
-def dedupe(events: list[Event], model: str | None = None, api_key: str | None = None) -> list[Event]:
+def _person_from_organizer(organizer: str, names: dict) -> str | None:
+    """Guess which parent actually created an event from its ORGANIZER
+    email's local part, matching against each parent's first name (config's
+    summary.names) rather than a fixed list of addresses — someone who books
+    through their personal Gmail, a work domain, and a scheduling app all in
+    the same month shouldn't need three addresses kept in sync here. Returns
+    None (leave `person` as whatever it already was) if `organizer` is empty
+    or names a first name for neither parent.
+    """
+    local = organizer.split("@", 1)[0].lower()
+    for who in ("spouse", "me"):          # check both before falling through
+        name = (names.get(who) or "").lower()
+        if name and name in local:
+            return who
+    return None
+
+
+def dedupe(
+    events: list[Event], model: str | None = None, api_key: str | None = None,
+    names: dict | None = None,
+) -> list[Event]:
     kept: list[Event] = []
     index: dict[tuple, list[Event]] = {}
     for e in sorted(events, key=lambda ev: (ev.start, ev.title.lower())):
@@ -43,6 +67,13 @@ def dedupe(events: list[Event], model: str | None = None, api_key: str | None = 
             match.sources.append(e.source)
             if not match.url and e.url:
                 match.url = e.url
+            # Google's export convention often leaves ORGANIZER blank on the
+            # organizer's own feed (see ingest/ical.py) but fills it in on
+            # every other attendee's copy — so once a duplicate confirms
+            # these are the same event, take whichever copy's organizer
+            # field is actually populated.
+            if not match.organizer and e.organizer:
+                match.organizer = e.organizer
             # A duplicate on someone's personal calendar is a stronger signal
             # than which feed happened to be scanned first: they put it there
             # on purpose, so it's personal even if it's *also* on their work
@@ -53,6 +84,13 @@ def dedupe(events: list[Event], model: str | None = None, api_key: str | None = 
         else:
             kept.append(e)
             index.setdefault(key, []).append(e)
+
+    if names:
+        for e in kept:
+            if e.category in ("work", "personal") and e.organizer:
+                guess = _person_from_organizer(e.organizer, names)
+                if guess:
+                    e.person = guess
 
     if api_key:
         kept = _llm_dedupe_local(kept, model or "claude-sonnet-5", api_key)

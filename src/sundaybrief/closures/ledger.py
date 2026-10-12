@@ -15,11 +15,14 @@ from pathlib import Path
 
 from .reader import EmailDoc
 
-# school -> child. Belongs in config long-term; hardcoded map for now.
-# "kid1"/"kid2" are just internal keys matched against config/sources.yaml's
-# per-source `child:` field (see gaps.py's ledger_keys reconciliation) — not
-# real names, so real names never need to live in tracked code either.
-CHILD_BY_SCHOOL = {"Goddard": "kid2", "Le Parc": "kid1"}
+def child_by_school(children: list[dict]) -> dict[str, str]:
+    """school -> real child name, from CHILDREN_JSON's optional `school` key
+    (see .env.example) — e.g. {"name": "Max", "school": "Le Parc", ...}.
+    Real names only ever live in .env, never in this tracked file, so a
+    child with no `school` key set just doesn't appear here; callers treat a
+    missing school the same as an unrecognized one (empty-string fallback).
+    """
+    return {c["school"]: c["name"] for c in children if c.get("school")}
 
 
 def _daterange(start: date, end: date):
@@ -40,7 +43,10 @@ def _title(school: str, type_: str, active: int, reason: str) -> str:
     return f"{school} {verb} — {reason}"
 
 
-def expand_rows(item: dict, doc: EmailDoc, attachment: str | None, extractor_tag: str) -> list[dict]:
+def expand_rows(
+    item: dict, doc: EmailDoc, attachment: str | None, extractor_tag: str,
+    child_by_school_map: dict[str, str] | None = None,
+) -> list[dict]:
     """One extracted fact -> one ledger row per calendar day in its span."""
     start = date.fromisoformat(item["start_date"])
     end = date.fromisoformat(item["end_date"])
@@ -50,7 +56,7 @@ def expand_rows(item: dict, doc: EmailDoc, attachment: str | None, extractor_tag
         rows.append({
             "record_id": "led_" + uuid.uuid4().hex[:10],
             "school": item["school"],
-            "child": CHILD_BY_SCHOOL.get(item["school"], ""),
+            "child": (child_by_school_map or {}).get(item["school"], ""),
             "date": d.isoformat(),
             "type": item["type"],
             "active": int(item["active"]),

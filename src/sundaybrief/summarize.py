@@ -137,15 +137,22 @@ def _brief_facts(sig: WeekSignals, names: dict | None = None, kind: BriefKind = 
             text += f" (LINK: {url})"
         by_day.setdefault(d, []).append(text)
 
+    # A school fact's own title doesn't always say which kid it's about (e.g.
+    # "Goddard note — Parent Presentation - Diwali"), so without e.child
+    # spelled out here the model has nothing to go on and may guess the
+    # wrong one if both kids appear elsewhere in the same digest.
+    def _kid(e) -> str:
+        return f" ({e.child})" if e.child else ""
+
     for e in sig.closures:
         for d in days_covered(e):
-            add(d, f"CLOSURE: {e.title}", e.url, e.context)
+            add(d, f"CLOSURE{_kid(e)}: {e.title}", e.url, e.context)
     for e in sig.half_days:
         for d in days_covered(e):
-            add(d, f"HALF-DAY: {e.title}", e.url, e.context)
+            add(d, f"HALF-DAY{_kid(e)}: {e.title}", e.url, e.context)
     for e in sig.notes:
         for d in days_covered(e):
-            add(d, f"NOTE: {e.title}", e.url, e.context)
+            add(d, f"NOTE{_kid(e)}: {e.title}", e.url, e.context)
     for e in sig.parent_events:
         who = names.get(e.person, e.person) or e.category
         add(e.day, f"{e.timelabel()} [{who}] {e.title}", e.url)
@@ -275,6 +282,7 @@ def build_narrative(
     try:
         from anthropic import Anthropic
     except ImportError:
+        print("build_narrative: anthropic package not installed, falling back to templated", file=sys.stderr)
         return None
 
     names = names or {}
@@ -295,7 +303,12 @@ def build_narrative(
         f"Below is a day-by-day digest of {kind.this_period} for you to read and "
         "summarize: CLOSURE/HALF-DAY/NOTE facts from school sources, each "
         "parent's own calendar events tagged by name, and LOCAL OPTION facts "
-        "for nearby events. Some facts carry a (LINK: url) — a link back to "
+        "for nearby events. A CLOSURE/HALF-DAY/NOTE is sometimes tagged with "
+        "which kid it's about, like \"CLOSURE (Max): ...\" — when it's "
+        "there, name that kid specifically rather than the family in general "
+        "or the other kid; when it's not there, the fact applies to the "
+        "family generally rather than one kid in particular. Some facts "
+        "carry a (LINK: url) — a link back to "
         "that fact's source (the calendar event or the school email). Some "
         "also carry a (CONTEXT: ...) — extra detail the school's email itself "
         "stated (a reschedule, unusual urgency or repetition). When present, "
@@ -322,12 +335,14 @@ def build_narrative(
         "(the links list after the delimiter doesn't count against this). "
         "Plain prose only — NO markdown, NO headers, NO bullet points, NO "
         "bold/asterisks, NO emoji. 3-5 short sentences, like a text message. "
-        "Cite at most 5 facts total — pick the ones worth following up on, "
-        "not every fact that happens to have a link. Put a blank line (two "
-        "newlines) between each of the numbered topics below when more than "
-        "one applies — closures/coverage-conflict, school milestones, and "
-        "personal highlights each get their own short paragraph rather than "
-        "running together in one block.\n\n"
+        "Cite at most 7 facts total, prioritizing closures and either "
+        "parent's own medical/dental appointments over generic personal "
+        "highlights or local picks when something has to be cut — pick the "
+        "ones worth following up on, not every fact that happens to have a "
+        "link. Put a blank line (two newlines) between each of the numbered "
+        "topics below when more than one applies — closures/coverage-"
+        "conflict, school milestones, and personal highlights each get their "
+        "own short paragraph rather than running together in one block.\n\n"
         "You are summarizing the two or three things that actually matter — "
         "you are NOT reproducing the digest day by day. Most days won't get a "
         "mention at all. Cover, in order of importance, only what applies:\n"
@@ -339,11 +354,17 @@ def build_narrative(
         "it's not a closure — a classroom change, a milestone, a schedule "
         "shift. Skip routine same-day appointments (doctor visits, pickups) "
         "unless something about them stands out.\n"
-        "3. One or two genuinely personal highlights — birthdays, social "
-        "plans, personal appointments. Never mention internal work meetings, "
+        "3. Any medical or dental appointment on either PARENT's own "
+        "calendar (an imaging scan, a doctor, a dentist, a specialist) — "
+        "mention each one that appears, even if it's the only thing worth "
+        "saying about that day. Don't weigh these against the personal "
+        "highlights in #4 the way you would a birthday or a social plan; "
+        "they should basically always make the cut.\n"
+        "4. One or two other genuinely personal highlights — birthdays, "
+        "social plans, a milestone. Never mention internal work meetings, "
         "standups, or syncs, even ones on a parent's own calendar, if they're "
         "clearly work business, not family business.\n"
-        "4. If there are LOCAL OPTION facts, one pick that fits young kids.\n\n"
+        "5. If there are LOCAL OPTION facts, one pick that fits young kids.\n\n"
         "Use only what's in the facts below — never invent an event or a "
         "conflict that isn't there.\n\n"
         f"FACTS (day-by-day):\n{facts}"
@@ -363,13 +384,30 @@ def build_narrative(
 
     parsed = _parse_narrative_response(raw, gcal_labels=_gcal_provenance(sig, names))
     if parsed is None:
+        # Empty/unusable prose — print a prefix of the raw response rather
+        # than nothing, since this and the length check below used to fail
+        # completely silently (no way to tell which of the two fired, or
+        # why, after the fact — see the 2026-10-11 investigation).
+        print(f"build_narrative: couldn't parse a usable response, falling back to "
+              f"templated. Raw response ({len(raw)} chars): {raw[:300]!r}", file=sys.stderr)
         return None
     message, links_message = parsed
     message = f"{kind.greeting}\n\n{message}"
     if len(message) > PUSHOVER_LIMIT:
-        return None
-    if links_message and len(links_message) > PUSHOVER_LIMIT:
-        links_message = None  # drop the follow-up rather than failing the whole brief
+        # Truncate rather than discard the whole narrative — same "..." style
+        # build_templated already uses for its own over-limit case. A clipped
+        # but still-personalized brief beats silently reverting to the bare
+        # templated fallback (see the 2026-10-11 115-event week that tripped
+        # this and sent nothing but "Daycare"/"Local picks" that morning).
+        print(f"build_narrative: narrative ran {len(message)} chars, over the "
+              f"{PUSHOVER_LIMIT}-char Pushover limit even after the greeting — "
+              f"truncating instead of falling back to templated.", file=sys.stderr)
+        message = message[: PUSHOVER_LIMIT - 1].rstrip() + "…"
+    # links_message is returned as-is even past PUSHOVER_LIMIT now — run.py
+    # splits it across multiple pushes (deliver.split_message) rather than
+    # this dropping the whole thing, which only got more likely to fire once
+    # the citation cap went up and started citing more (and longer, e.g.
+    # Gcal eid) links per brief.
     return message, links_message
 
 

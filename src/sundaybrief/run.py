@@ -139,7 +139,10 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Window: {start:%a %b %-d %Y} → {end:%a %b %-d %Y} ({span} days)", file=sys.stderr)
 
     api_key = get_secret("ANTHROPIC_API_KEY", required=False)
-    events = dedupe(gather(config, start, end), model=config["summary"]["model"], api_key=api_key)
+    events = dedupe(
+        gather(config, start, end), model=config["summary"]["model"], api_key=api_key,
+        names=config["summary"]["names"],
+    )
     print(f"Total after dedupe: {len(events)} events", file=sys.stderr)
 
     if args.show_events:
@@ -154,7 +157,7 @@ def main(argv: list[str] | None = None) -> int:
     ledger_rows = load_ledger(args.ledger)
     print(f"Ledger: {len(ledger_rows)} rows ({args.ledger})", file=sys.stderr)
 
-    signals = analyze(events, start, end, ledger_rows=ledger_rows)
+    signals = analyze(events, start, end, ledger_rows=ledger_rows, children=config["summary"]["children"])
 
     style = args.style or config["summary"]["style"]
     title, message = build_templated(signals, kind)

@@ -16,7 +16,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, replace
 from datetime import date, datetime, timedelta
 
-from .closures.ledger import CHILD_BY_SCHOOL, effective_closures, effective_notes, source_link
+from .closures.ledger import effective_closures, effective_notes, source_link
 from .models import Event, to_local
 
 CLOSURE_KEYWORDS = (
@@ -28,7 +28,11 @@ HALFDAY_KEYWORDS = (
     "noon dismissal", "early close",
 )
 
-_KNOWN_CHILDREN = {name.lower(): name for name in CHILD_BY_SCHOOL.values()}
+def _known_children(children: list[dict] | None) -> dict[str, str]:
+    """lowercase name -> real name, from CHILDREN_JSON (config's
+    summary.children) — the actual kids' names, not an internal correlation
+    key, since this is for matching real calendar-event *titles*."""
+    return {c["name"].lower(): c["name"] for c in (children or []) if c.get("name")}
 
 
 @dataclass
@@ -78,7 +82,7 @@ def _days_in_window(event: Event, window_start: date, window_end: date) -> list[
 
 
 def _scan_calendar_closures(
-    events: list[Event], window_start: date, window_end: date
+    events: list[Event], window_start: date, window_end: date, known_children: dict[str, str] | None = None,
 ) -> tuple[list[Event], list[Event]]:
     """Find closure/half-day mentions in the calendar itself, exploded to one
     Event per day within the window.
@@ -96,14 +100,15 @@ def _scan_calendar_closures(
     calendar (e.g. "kid2 school closed") that would otherwise never be
     flagged, since only daycare-category sources carry a `child` tag.
     """
+    known_children = known_children or {}
     closures, half_days = [], []
     for e in events:
         if e.category != "daycare":
             t = e.title.lower()
-            name = next((n for n in _KNOWN_CHILDREN if n in t), None)
+            name = next((n for n in known_children if n in t), None)
             if not name:
                 continue
-            e = replace(e, child=_KNOWN_CHILDREN[name])
+            e = replace(e, child=known_children[name])
         if _matches(e.title, CLOSURE_KEYWORDS):
             bucket = closures
         elif _matches(e.title, HALFDAY_KEYWORDS):
@@ -194,6 +199,7 @@ def analyze(
     window_start: datetime,
     window_end: datetime,
     ledger_rows: list[dict] | None = None,
+    children: list[dict] | None = None,
 ) -> WeekSignals:
     sig = WeekSignals(window_start=window_start, window_end=window_end)
 
@@ -217,7 +223,7 @@ def analyze(
             sig.local_events.append(e)
 
     calendar_closures, calendar_half_days = _scan_calendar_closures(
-        events, window_start.date(), window_end.date(),
+        events, window_start.date(), window_end.date(), _known_children(children),
     )
 
     if ledger_rows is not None:

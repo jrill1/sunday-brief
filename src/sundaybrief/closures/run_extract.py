@@ -11,12 +11,16 @@ from __future__ import annotations
 
 import argparse
 import html
+import json
 import sys
 from pathlib import Path
 
 from . import reader
 from .extract import AnthropicExtractor
-from .ledger import append_rows, expand_rows, is_duplicate_row, load_ledger, load_processed, mark_processed, source_link
+from .ledger import (
+    append_rows, child_by_school, expand_rows, is_duplicate_row,
+    load_ledger, load_processed, mark_processed, source_link,
+)
 from ..deliver import send_pushover
 from ..secrets import get_secret
 
@@ -94,8 +98,12 @@ def send_spotchecks(rows: list[dict]) -> None:
     print(f"  sent {len(rows)} new row(s) as {len(chunks)} spotcheck push(es)", file=sys.stderr)
 
 
-def run(source: str, extract_fn, model_tag: str, dry_run: bool, spotcheck: bool = True) -> int:
+def run(
+    source: str, extract_fn, model_tag: str, dry_run: bool, spotcheck: bool = True,
+    children: list[dict] | None = None,
+) -> int:
     docs = get_docs(source)
+    school_to_child = child_by_school(children or [])
     processed = load_processed(PROCESSED)
     existing = load_ledger(LEDGER)  # for cross-email dedup, see is_duplicate_row
     print(f"{len(docs)} messages; {len(processed)} already processed", file=sys.stderr)
@@ -111,7 +119,7 @@ def run(source: str, extract_fn, model_tag: str, dry_run: bool, spotcheck: bool 
         att = doc.attachments[0][0] if doc.attachments else None
         rows = []
         for item in items:
-            for row in expand_rows(item, doc, att, model_tag):
+            for row in expand_rows(item, doc, att, model_tag, school_to_child):
                 if is_duplicate_row(row, existing):
                     dup_rows += 1
                     continue
@@ -154,10 +162,13 @@ def main(argv=None) -> int:
     from dotenv import load_dotenv
     load_dotenv(REPO_ROOT / ".env")
 
+    children_json = get_secret("CHILDREN_JSON", required=False)
+    children = json.loads(children_json) if children_json else []
+
     from anthropic import Anthropic
     extractor = AnthropicExtractor(Anthropic(), args.model, PROMPT)
     tag = f"{args.model} / prompt-v1"
-    return run(args.source, extractor, tag, args.dry_run, spotcheck=not args.no_spotcheck)
+    return run(args.source, extractor, tag, args.dry_run, spotcheck=not args.no_spotcheck, children=children)
 
 
 if __name__ == "__main__":

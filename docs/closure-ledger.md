@@ -76,8 +76,9 @@ For each extracted item, on the way into the ledger:
 4. **Compose the title** deterministically from type + active + reason
    (e.g. `"Goddard closed — Faculty In-Service"`; a canceled row →
    `"Goddard open — PD Day canceled"`). Gap-detector-friendly.
-5. **Derive `child` from `school`** via config (Goddard→kid2, Le Parc→kid1).
-   The LLM does not guess the child.
+5. **Derive `child` from `school`** via `CHILDREN_JSON`'s optional `school`
+   key in `.env` (see `.env.example`) — `closures/ledger.py`'s
+   `child_by_school()`. The LLM does not guess the child.
 6. **Attach provenance** pulled from the forwarded message headers (see §3).
 7. **Assign `record_id`** (unique per row) and stamp `date_added`.
 
@@ -94,7 +95,7 @@ One row **per day**. Append-only.
 {
   "record_id": "led_8f2c9a",
   "school": "Goddard",
-  "child": "kid2",
+  "child": "Max",
   "date": "2026-08-27",
   "type": "closure",
   "active": 1,
